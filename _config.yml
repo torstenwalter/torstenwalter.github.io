@@ -31,3 +31,5 @@ exclude:
   - Gemfile
   - Gemfile.lock
 google_analytics: UA-89025602-1
+disqus:
+    shortname: torsten_walter
