@@ -50,7 +50,7 @@ brew install docker-machine-driver-xhyve
 brew cask install virtualbox
 ```
 
-###
+### Install Minishift
 ```
 brew cask install minishift
 minishift start
