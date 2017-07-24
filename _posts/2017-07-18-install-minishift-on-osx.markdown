@@ -42,6 +42,7 @@ nslookup index.docker.io 192.168.64.1
 ### Install yhyve
 https://docs.openshift.org/latest/minishift/getting-started/setting-up-driver-plugin.html
 ```
+brew install xhyve
 brew install docker-machine-driver-xhyve
 ```
 
