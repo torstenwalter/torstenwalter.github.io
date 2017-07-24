@@ -18,8 +18,8 @@ brew update
 brew install dnsmasq
 ```
 
-Configure dnsmasq to listen on all network interfaces:
-```/usr/local/etc/dnsmasq.conf
+Edit /usr/local/etc/dnsmasq.conf to configure dnsmasq to listen on all network interfaces:
+```
 listen-address=0.0.0.0
 listen-address=::1
 ```
