@@ -10,6 +10,10 @@ categories: minishift openshift docker registry
 ```
 eval $(minishift docker-env)
 ```
+or when using fishshell
+```
+eval (minishift docker-env)
+```
 
 - login to openshift
 ```
