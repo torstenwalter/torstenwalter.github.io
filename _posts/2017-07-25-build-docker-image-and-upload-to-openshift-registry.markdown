@@ -20,6 +20,10 @@ oc login -u developer
 ```
 docker login -u `oc whoami` -p `oc whoami -t` 172.30.1.1:5000
 ```
+or when using fishshell
+```
+docker login -u (oc whoami) -p (oc whoami -t) 172.30.1.1:5000
+```
 
 - build the docker image
 ```
