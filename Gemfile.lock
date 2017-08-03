@@ -3,6 +3,8 @@ GEM
   specs:
     addressable (2.5.1)
       public_suffix (~> 2.0, >= 2.0.2)
+    asciidoctor (1.5.6.1)
+    coderay (1.1.1)
     colorator (1.1.0)
     ffi (1.9.18)
     forwardable-extended (2.6.0)
@@ -17,6 +19,9 @@ GEM
       pathutil (~> 0.9)
       rouge (~> 1.7)
       safe_yaml (~> 1.0)
+    jekyll-asciidoc (2.0.1)
+      asciidoctor (>= 1.5.0)
+      jekyll (>= 2.3.0)
     jekyll-feed (0.9.2)
       jekyll (~> 3.3)
     jekyll-sass-converter (1.5.0)
@@ -34,6 +39,9 @@ GEM
     pathutil (0.14.0)
       forwardable-extended (~> 2.6)
     public_suffix (2.0.5)
+    rake (10.5.0)
+    rake-jekyll (1.1.0)
+      rake (~> 10.0)
     rb-fsevent (0.10.2)
     rb-inotify (0.9.10)
       ffi (>= 0.5.0, < 2)
@@ -49,9 +57,12 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  coderay (~> 1.1.0)
   jekyll (= 3.3.1)
+  jekyll-asciidoc (~> 2.0.1)
   jekyll-feed (~> 0.6)
   minima (~> 2.0)
+  rake-jekyll (~> 1.1.0)
 
 RUBY VERSION
    ruby 2.4.1p111
