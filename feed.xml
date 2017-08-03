@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.3.1">Jekyll</generator><link href="https://torstenwalter.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://torstenwalter.github.io/" rel="alternate" type="text/html" /><updated>2017-08-03T11:54:55+00:00</updated><id>https://torstenwalter.github.io/</id><title type="html">Torsten Walter</title><subtitle></subtitle><entry><title type="html">How to install and configure fish shell on OSX</title><link href="https://torstenwalter.github.io/osx/shell/fish/2017/07/26/fish-shell.html" rel="alternate" type="text/html" title="How to install and configure fish shell on OSX" /><published>2017-07-26T10:00:00+00:00</published><updated>2017-07-26T10:00:00+00:00</updated><id>https://torstenwalter.github.io/osx/shell/fish/2017/07/26/fish-shell</id><content type="html" xml:base="https://torstenwalter.github.io/osx/shell/fish/2017/07/26/fish-shell.html">&lt;p&gt;&lt;a href=&quot;https://fishshell.com/&quot;&gt;fish&lt;/a&gt; is a very nice shell with autocompletion out of the box. I find it extremely useful.
+This explains how you can install it on OS X using homebrew and make it even better by using a popwerline style prompt.&lt;/p&gt;
+
+&lt;h2 id=&quot;install-fish-shell&quot;&gt;Install fish shell&lt;/h2&gt;
+&lt;p&gt;Let’s install it using brew&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;brew install fish
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Add &lt;code class=&quot;highlighter-rouge&quot;&gt;/usr/local/bin/fish&lt;/code&gt; to &lt;code class=&quot;highlighter-rouge&quot;&gt;/etc/shells&lt;/code&gt; if it is not alredy there:&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;cat /etc/shells|grep /usr/local/bin/fish ||sudo sh -c 'echo &quot;/usr/local/bin/fish&quot; &amp;gt;&amp;gt; /etc/shells'
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;make fish your default shell&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;chsh -s /usr/local/bin/fish
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;make-the-terminal-even-nicer-by-customizing-the-prompt&quot;&gt;Make the terminal even nicer by customizing the prompt&lt;/h2&gt;
+
+&lt;p&gt;fish shell is already awesome, but we can make it even better by using a powerline style prompt which displays git branches,
+the exit status of the last command, the current time  and much more.&lt;/p&gt;
+
+&lt;p&gt;To install it we are going to use Oh My Fish:&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Oh My Fish provides core infrastructure to allow you to install packages which extend or modify the look of your shell. It’s fast, extensible and easy to use.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Install &lt;a href=&quot;https://github.com/oh-my-fish/oh-my-fish&quot;&gt;oh-my-fish&lt;/a&gt;&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;curl -L https://get.oh-my.fish | fish
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Now we can use oh my fish to install bobthefish, which is a Powerline-style, Git aware fish theme.&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;omf install bobthefish
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Let’s make it even more awesome by installing nerd-fonts&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;brew tap caskroom/fonts
+brew cask install font-hack-nerd-font
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;After that you should change the font of your terminal to &lt;code class=&quot;highlighter-rouge&quot;&gt;Knack Nerd Font&lt;/code&gt; and enable them in bobthefish&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;set -g theme_nerd_fonts yes
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;</content><author><name></name></author><summary type="html">fish is a very nice shell with autocompletion out of the box. I find it extremely useful. This explains how you can install it on OS X using homebrew and make it even better by using a popwerline style prompt.</summary></entry><entry><title type="html">How to build a docker image and upload it to Minishift’s docker registry?</title><link href="https://torstenwalter.github.io/minishift/openshift/docker/registry/2017/07/25/build-docker-image-and-upload-to-openshift-registry.html" rel="alternate" type="text/html" title="How to build a docker image and upload it to Minishift's docker registry?" /><published>2017-07-25T13:30:00+00:00</published><updated>2017-07-25T13:30:00+00:00</updated><id>https://torstenwalter.github.io/minishift/openshift/docker/registry/2017/07/25/build-docker-image-and-upload-to-openshift-registry</id><content type="html" xml:base="https://torstenwalter.github.io/minishift/openshift/docker/registry/2017/07/25/build-docker-image-and-upload-to-openshift-registry.html">&lt;ul&gt;
+  &lt;li&gt;set docker environment variables to connect do Minishift docker daemon
+    &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;eval $(minishift docker-env)
+&lt;/code&gt;&lt;/pre&gt;
+    &lt;/div&gt;
+    &lt;p&gt;or when using fishshell&lt;/p&gt;
+    &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;eval (minishift docker-env)
+&lt;/code&gt;&lt;/pre&gt;
+    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;login to openshift
+    &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;oc login -u developer
+&lt;/code&gt;&lt;/pre&gt;
+    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;login to the docker registry using the token from the currently logged-in openshift user
+    &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;docker login -u `oc whoami` -p `oc whoami -t` 172.30.1.1:5000
+&lt;/code&gt;&lt;/pre&gt;
+    &lt;/div&gt;
+    &lt;p&gt;or when using fishshell&lt;/p&gt;
+    &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;docker login -u (oc whoami) -p (oc whoami -t) 172.30.1.1:5000
+&lt;/code&gt;&lt;/pre&gt;
+    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;build the docker image
+    &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;docker-compose build
+&lt;/code&gt;&lt;/pre&gt;
+    &lt;/div&gt;
+    &lt;p&gt;The output looks like:&lt;/p&gt;
+    &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Building jenkins
+Step 1 : FROM registry.hub.docker.com/library/centos:centos7
+ ---&amp;gt; 36540f359ca3
+Step 2 : ...
+       ...
+ ---&amp;gt; a4628dc93c97
+Successfully built a4628dc93c97
+&lt;/code&gt;&lt;/pre&gt;
+    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;tag the newly created docker image
+    &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;docker tag a4628dc93c97 172.30.1.1:5000/myproject/jenkins
+&lt;/code&gt;&lt;/pre&gt;
+    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;push the image to the docker registry
+    &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;docker push 172.30.1.1:5000/myproject/jenkins
+&lt;/code&gt;&lt;/pre&gt;
+    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;verify that the image was uploaded
+    &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;oc get istag
+&lt;/code&gt;&lt;/pre&gt;
+    &lt;/div&gt;
+    &lt;p&gt;output:&lt;/p&gt;
+    &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;NAME             DOCKER REF                                                                                                  UPDATED             IMAGENAME
+jenkins:latest   172.30.1.1:5000/myproject/jenkins@sha256:6cab7386a27b2a8aa97d181f1d413d54a9fcb6dbfcf9b98d53bcff64ad05726b   About an hour ago   sha256:6cab7386a27b2a8aa97d181f1d413d54a9fcb6dbfcf9b98d53bcff64ad05726b
+&lt;/code&gt;&lt;/pre&gt;
+    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;If you want to give your image a different label then ‘latest’ you can specify it as well:
+    &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;docker tag a4628dc93c97 172.30.1.1:5000/myproject/jenkins:1.0.0
+docker push 172.30.1.1:5000/myproject/jenkins:1.0.0
+&lt;/code&gt;&lt;/pre&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;oc get istag
+&lt;/code&gt;&lt;/pre&gt;
+    &lt;/div&gt;
+    &lt;p&gt;output:&lt;/p&gt;
+    &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;NAME             DOCKER REF                                                                                                  UPDATED             IMAGENAME
+jenkins:latest   172.30.1.1:5000/myproject/jenkins@sha256:6cab7386a27b2a8aa97d181f1d413d54a9fcb6dbfcf9b98d53bcff64ad05726b   About an hour ago   sha256:6cab7386a27b2a8aa97d181f1d413d54a9fcb6dbfcf9b98d53bcff64ad05726b
+jenkins:1.0.0    172.30.1.1:5000/myproject/jenkins@sha256:0e1b8efd34dc13e721b231cab8c7e07fda5b03a14ef451874580c01fc1c2740d   27 seconds ago      sha256:0e1b8efd34dc13e721b231cab8c7e07fda5b03a14ef451874580c01fc1c2740d
+&lt;/code&gt;&lt;/pre&gt;
+    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;create a new application from the uploaded image
+    &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;oc new-app --image-stream=jenkins --name=jenkins
+&lt;/code&gt;&lt;/pre&gt;
+    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;expose a route for the new application
+    &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;oc expose service jenkins
+&lt;/code&gt;&lt;/pre&gt;
+    &lt;/div&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;</content><author><name></name></author><summary type="html">set docker environment variables to connect do Minishift docker daemon eval $(minishift docker-env) or when using fishshell eval (minishift docker-env)</summary></entry><entry><title type="html">Installing Minishift on OS X</title><link href="https://torstenwalter.github.io/minishift/openshift/homebrew/2017/07/18/install-minishift-on-osx.html" rel="alternate" type="text/html" title="Installing Minishift on OS X" /><published>2017-07-18T12:30:00+00:00</published><updated>2017-07-18T12:30:00+00:00</updated><id>https://torstenwalter.github.io/minishift/openshift/homebrew/2017/07/18/install-minishift-on-osx</id><content type="html" xml:base="https://torstenwalter.github.io/minishift/openshift/homebrew/2017/07/18/install-minishift-on-osx.html">&lt;p&gt;If you want to play around with OpenShift locally then Minishift is a nice option.&lt;/p&gt;
+
+&lt;p&gt;When I tried to install it then I got an error message that the openshift docker image could not be loaded.
+Luckily this &lt;a href=&quot;https://github.com/minishift/minishift/issues/109#issuecomment-254895497&quot;&gt;comment&lt;/a&gt; pointed me
+in the right direction, that DNS was not working properly.&lt;/p&gt;
+
+&lt;h2 id=&quot;install-dnsmasq&quot;&gt;Install dnsmasq&lt;/h2&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;brew update
+brew install dnsmasq
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Edit /usr/local/etc/dnsmasq.conf to configure dnsmasq to listen on all network interfaces:&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;listen-address=0.0.0.0
+listen-address=::1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Restart dnsmasq&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo brew services restart dnsmasq
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;test if nameserver listens on all ip adresses&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;# use 127.0.0.1 to lookup index.docker.io
+nslookup index.docker.io 127.0.0.1
+# use 192.168.64.1 to lookup index.docker.io
+nslookup index.docker.io 192.168.64.1
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;install-minishift&quot;&gt;Install Minishift&lt;/h2&gt;
+
+&lt;h3 id=&quot;install-yhyve&quot;&gt;Install yhyve&lt;/h3&gt;
+&lt;p&gt;https://docs.openshift.org/latest/minishift/getting-started/setting-up-driver-plugin.html&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;brew install xhyve
+brew install docker-machine-driver-xhyve
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;install-virtualbox&quot;&gt;Install VirtualBox&lt;/h3&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;brew cask install virtualbox
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;install-minishift-1&quot;&gt;Install Minishift&lt;/h3&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;brew cask install minishift
+minishift start
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;</content><author><name></name></author><summary type="html">If you want to play around with OpenShift locally then Minishift is a nice option.</summary></entry><entry><title type="html">Continuous Delivery with Maven and Jenkins</title><link href="https://torstenwalter.github.io/maven/jenkins/2016/12/14/continuous-delivery-with-maven-and-jenkins.html" rel="alternate" type="text/html" title="Continuous Delivery with Maven and Jenkins" /><published>2016-12-14T12:30:00+00:00</published><updated>2016-12-14T12:30:00+00:00</updated><id>https://torstenwalter.github.io/maven/jenkins/2016/12/14/continuous-delivery-with-maven-and-jenkins</id><content type="html" xml:base="https://torstenwalter.github.io/maven/jenkins/2016/12/14/continuous-delivery-with-maven-and-jenkins.html">&lt;p&gt;Motivation: Every jenkins build produces a potential release and as such each build should have a unique version number.
+This post shows how to use the Jenkins build number to achive this.&lt;/p&gt;
+
+&lt;p&gt;The basic idea is to use a variable as part of the &amp;lt;version&amp;gt;…&amp;lt;/version&amp;gt; declaration in your pom.xml. This variable
+is set to 1.0-SNAPSHOT by default for local builds and when ececuted on jenkins to ‘1.0-&amp;lt;BUILD_NUMBER&amp;gt;’.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-xml&quot; data-lang=&quot;xml&quot;&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;project&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;xmlns=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;http://maven.apache.org/POM/4.0.0&quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;xmlns:xsi=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;http://www.w3.org/2001/XMLSchema-instance&quot;&lt;/span&gt;
+         &lt;span class=&quot;na&quot;&gt;xsi:schemaLocation=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;modelVersion&amp;gt;&lt;/span&gt;4.0.0&lt;span class=&quot;nt&quot;&gt;&amp;lt;/modelVersion&amp;gt;&lt;/span&gt;
+
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;groupId&amp;gt;&lt;/span&gt;de.torstenwalter.examples&lt;span class=&quot;nt&quot;&gt;&amp;lt;/groupId&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;artifactId&amp;gt;&lt;/span&gt;jenkins-versioning&lt;span class=&quot;nt&quot;&gt;&amp;lt;/artifactId&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;version&amp;gt;&lt;/span&gt;${revision}&lt;span class=&quot;nt&quot;&gt;&amp;lt;/version&amp;gt;&lt;/span&gt;
+
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;properties&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;baseRevision&amp;gt;&lt;/span&gt;1.0&lt;span class=&quot;nt&quot;&gt;&amp;lt;/baseRevision&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;revision&amp;gt;&lt;/span&gt;${baseRevision}-SNAPSHOT&lt;span class=&quot;nt&quot;&gt;&amp;lt;/revision&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;/properties&amp;gt;&lt;/span&gt;
+
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;profiles&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;profile&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;id&amp;gt;&lt;/span&gt;jenkins&lt;span class=&quot;nt&quot;&gt;&amp;lt;/id&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;activation&amp;gt;&lt;/span&gt;
+                &lt;span class=&quot;nt&quot;&gt;&amp;lt;property&amp;gt;&lt;/span&gt;
+                    &lt;span class=&quot;nt&quot;&gt;&amp;lt;name&amp;gt;&lt;/span&gt;env.BUILD_NUMBER&lt;span class=&quot;nt&quot;&gt;&amp;lt;/name&amp;gt;&lt;/span&gt;
+                &lt;span class=&quot;nt&quot;&gt;&amp;lt;/property&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;/activation&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;properties&amp;gt;&lt;/span&gt;
+                &lt;span class=&quot;nt&quot;&gt;&amp;lt;revision&amp;gt;&lt;/span&gt;${baseRevision}-${env.BUILD_NUMBER}&lt;span class=&quot;nt&quot;&gt;&amp;lt;/revision&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;/properties&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;/profile&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;/profiles&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/project&amp;gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;As variable name for the version &lt;code class=&quot;highlighter-rouge&quot;&gt;${revision}&lt;/code&gt; is used as it is explicitly allowed since maven 3.2.1  at that location
+(see &lt;a href=&quot;https://issues.apache.org/jira/browse/MNG-5576&quot;&gt;improvement MNG-5576&lt;/a&gt;).&lt;/p&gt;
+
+&lt;p&gt;This is the warning if you try to use a different variable name e.g. ${myVar} instead of ${revision}:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;[WARNING] Some problems were encountered while building the effective model for de.torstenwalter.examples:jenkins-versioning:jar:${myVar}
+[WARNING] 'version' contains an expression but should be a constant. @ line 7, column 14
+[WARNING]
+[WARNING] It is highly recommended to fix these problems because they threaten the stability of your build.
+[WARNING]
+[WARNING] For this reason, future Maven versions might no longer support building such malformed projects.
+[WARNING]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;This snippet sets the default value for revision to 1.0-SNAPSHOT:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-xml&quot; data-lang=&quot;xml&quot;&gt;    &lt;span class=&quot;nt&quot;&gt;&amp;lt;properties&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;baseRevision&amp;gt;&lt;/span&gt;1.0&lt;span class=&quot;nt&quot;&gt;&amp;lt;/baseRevision&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;revision&amp;gt;&lt;/span&gt;${baseRevision}-SNAPSHOT&lt;span class=&quot;nt&quot;&gt;&amp;lt;/revision&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;/properties&amp;gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;baseRevision&lt;/code&gt; is meant to provide the base version e.g. 1.0 or 2.3 where the build number is later appended or -LATEST for
+local builds.&lt;/p&gt;
+
+&lt;p&gt;The build number is included as part of the version by using a maven profile which is automatically enabled when the 
+environment variable &lt;code class=&quot;highlighter-rouge&quot;&gt;BUILD_NUMBER&lt;/code&gt; is present.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-xml&quot; data-lang=&quot;xml&quot;&gt;        &lt;span class=&quot;nt&quot;&gt;&amp;lt;profile&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;id&amp;gt;&lt;/span&gt;jenkins&lt;span class=&quot;nt&quot;&gt;&amp;lt;/id&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;activation&amp;gt;&lt;/span&gt;
+                &lt;span class=&quot;nt&quot;&gt;&amp;lt;property&amp;gt;&lt;/span&gt;
+                    &lt;span class=&quot;nt&quot;&gt;&amp;lt;name&amp;gt;&lt;/span&gt;env.BUILD_NUMBER&lt;span class=&quot;nt&quot;&gt;&amp;lt;/name&amp;gt;&lt;/span&gt;
+                &lt;span class=&quot;nt&quot;&gt;&amp;lt;/property&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;/activation&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;properties&amp;gt;&lt;/span&gt;
+                &lt;span class=&quot;nt&quot;&gt;&amp;lt;revision&amp;gt;&lt;/span&gt;${baseRevision}-${env.BUILD_NUMBER}&lt;span class=&quot;nt&quot;&gt;&amp;lt;/revision&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;/properties&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;/profile&amp;gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;</content><author><name></name></author><summary type="html">Motivation: Every jenkins build produces a potential release and as such each build should have a unique version number. This post shows how to use the Jenkins build number to achive this.</summary></entry></feed>
