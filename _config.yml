@@ -33,6 +33,7 @@ exclude:
   - Gemfile.lock
   - Rakefile
   - torstenwalter.github.io.iml
+  - vendor
 google_analytics: UA-89025602-1
 disqus:
     shortname: torstenwalter-github-io
