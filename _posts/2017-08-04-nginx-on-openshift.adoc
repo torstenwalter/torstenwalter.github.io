@@ -1,0 +1,221 @@
+---
+layout: post
+title:  "How to run nginx on OpenShift?"
+date:   2017-08-04 13:00:00 +0200
+categories: openshift nginx
+---
+:toc:
+
+The official http://nginx.org/[NGINX] docker container published on https://hub.docker.com/_/nginx/[docker hub] does not run on Openshift,
+because of OpenShift security constraints. If you want to learn more about it continue reading otherwise you could jump directly to <<Run nginx in OpenShift>>.
+
+
+To quote from https://docs.openshift.com/container-platform/3.5/creating_images/guidelines.html#openshift-container-platform-specific-guidelines[OpenShift Container Platform-Specific Guidelines]:
+
+____
+Support Arbitrary User IDs
+
+By default, OpenShift Container Platform runs containers using an arbitrarily assigned user ID. This provides additional security against processes escaping the container due to a container engine vulnerability and thereby achieving escalated permissions on the host node.
+
+For an image to support running as an arbitrary user, directories and files that may be written to by processes in the image should be owned by the root group and be read/writable by that group. Files to be executed should also have group execute permissions.
+____
+
+== Fix file and directory permissions
+Let's chack the nginx configuration file for possible file or directory permission problems.
+
+./etc/nginx/nginx.conf
+----
+user  nginx;
+worker_processes  1;
+
+error_log  /var/log/nginx/error.log warn; // <1>
+pid        /var/run/nginx.pid; // <2>
+
+
+events {
+    worker_connections  1024;
+}
+
+
+http {
+    include       /etc/nginx/mime.types; // <3>
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  /var/log/nginx/access.log  main; // <1>
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    keepalive_timeout  65;
+
+    #gzip  on;
+
+    include /etc/nginx/conf.d/*.conf; // <4>
+}
+----
+
+<1> `/var/log/nginx` - the directory for nginx logs needs to be writeable by group `root`
+<2> `/var/run` - the nginx.pid file is written there so we need write permissions here is well
+<3> `/etc/nginx/mime.types` - read permissions will do in this case
+<4> `/etc/nginx/conf.d/` - as nginx should not write to configuration files read permissions are sufficient
+
+In addition nginx writes files to `/var/cache/nginx`
+
+Let's check the permissions for these files and directories:
+
+* run the official nginx docker image:
+
+  docker run -it nginx:latest /bin/bash
+
+* check the owner, group and permissions
+
+  ls -aldH /var/log/nginx /var/run /etc/nginx /etc/nginx/mime.types /etc/nginx/conf.d /var/cache/nginx
+
+  drwxr-xr-x 3 root root 4096 Jul 26 07:33 /etc/nginx
+  drwxr-xr-x 2 root root 4096 Jul 26 07:33 /etc/nginx/conf.d
+  -rw-r--r-- 1 root root 3957 Jul 11 13:06 /etc/nginx/mime.types
+  drwxr-xr-x 2 root root 4096 Jul 11 13:06 /var/cache/nginx
+  drwxr-xr-x 1 root root 4096 Jul 26 07:34 /var/log/nginx
+  drwxr-xr-x 4 root root 4096 Jul 23 00:00 /var/run
+
+As you can see we need to correct the permissions for `/var/cache/nginx`, `/var/log/nginx` and `/var/run`. The neccessary command to do so is:
+
+```
+chmod g+rwx /var/cache/nginx /var/run /var/log/nginx
+```
+
+== Fix used port
+A side effect of running as an arbitrary user we can't listen to port 80 as the official nginx docker image does, as privileged ports can only be used by root.
+
+./etc/nginx/conf.d/default.conf
+----
+server {
+    listen       80; // <1>
+    server_name  localhost;
+
+    #charset koi8-r;
+    #access_log  /var/log/nginx/host.access.log  main;
+
+    location / {
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+    }
+
+    #error_page  404              /404.html;
+
+    # redirect server error pages to the static page /50x.html
+    #
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+
+    # proxy the PHP scripts to Apache listening on 127.0.0.1:80
+    #
+    #location ~ \.php$ {
+    #    proxy_pass   http://127.0.0.1;
+    #}
+
+    # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+    #
+    #location ~ \.php$ {
+    #    root           html;
+    #    fastcgi_pass   127.0.0.1:9000;
+    #    fastcgi_index  index.php;
+    #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+    #    include        fastcgi_params;
+    #}
+
+    # deny access to .htaccess files, if Apache's document root
+    # concurs with nginx's one
+    #
+    #location ~ /\.ht {
+    #    deny  all;
+    #}
+}
+----
+<1> listen port is 80
+
+We can change the port unsing an in-place sed expression:
+```
+sed -i.bak 's/listen\(.*\)80;/listen 8081;/' /etc/nginx/conf.d/default.conf
+```
+
+## Remove user directive
+
+If you start nginx with the modifications from above the following error message is shown:
+
+----
+2017/08/04 06:51:55 [warn] 1#1: the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /etc/nginx/nginx.conf:2
+nginx: [warn] the "user" directive makes sense only if the master process runs with super-user privileges, ignored in /etc/nginx/nginx.conf:2
+----
+
+This directive is listed on the first line of nginx.conf
+
+./etc/nginx/nginx.conf
+----
+user  nginx;
+worker_processes  1;
+
+error_log  /var/log/nginx/error.log warn;
+...
+----
+
+We can comment the user directive with a simple sed expression like:
+----
+RUN sed -i.bak 's/^user/#user/' /etc/nginx/nginx.conf
+----
+
+
+== Dockerfile
+The following Dockerfile can be used to fix the problems with the official nginx docker image so that it can be run on OpenShift:
+
+.Dockerfile
+----
+FROM nginx:stable
+
+# support running as arbitrary user which belogs to the root group
+RUN chmod g+rwx /var/cache/nginx /var/run /var/log/nginx
+# users are not allowed to listen on priviliged ports
+RUN sed -i.bak 's/listen\(.*\)80;/listen 8081;/' /etc/nginx/conf.d/default.conf
+EXPOSE 8081
+# comment user directive as master process is run as user in OpenShift anyhow
+RUN sed -i.bak 's/^user/#user/' /etc/nginx/nginx.conf
+----
+
+So that you don't have to do this I created docker images with these modifications in https://hub.docker.com/r/twalter/openshift-nginx/.
+The tags follow the official nginx tags. All images should automatically be rebuilt whenever the official nginx images are rebuilt.
+
+## Run nginx in OpenShift
+
+So finally we can use nginx in OpenShift:
+```
+oc new-app twalter/openshift-nginx:stable --name nginx-stable
+oc expose svc nginx-stable --port=8081
+```
+
+When you open the public route you should see the message "Welcome to nginx!".
+
+Of course you can do the same with the other images:
+```
+oc new-app twalter/openshift-nginx:latest --name nginx-latest
+oc expose svc nginx-latest --port=8081
+```
+
+The alpine versions are available as well:
+```
+oc new-app twalter/openshift-nginx:mainline-alpine --name nginx-mainline-alpine
+oc expose svc nginx-mainline-alpine --port=8081
+```
+
+If you want to use a template to create a deployment config, service and route for nginx
+you could use https://raw.githubusercontent.com/torstenwalter/openshift-nginx/master/tests/nginx-template.yml[this one] as basis. I am actually using it to test the built nginx images with
+the modifications described above.
+
+```
+oc process -f https://raw.githubusercontent.com/torstenwalter/openshift-nginx/master/tests/nginx-template.yml NAME=nginx-stable-alpine NGINX_VERSION=stable-alpine |oc apply -f -
+```
