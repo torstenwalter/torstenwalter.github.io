@@ -1,4 +1,320 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.3.1">Jekyll</generator><link href="https://torstenwalter.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://torstenwalter.github.io/" rel="alternate" type="text/html" /><updated>2017-08-03T12:45:11+00:00</updated><id>https://torstenwalter.github.io/</id><title type="html">Torsten Walter</title><subtitle></subtitle><entry><title type="html">How to install and configure fish shell on OSX</title><link href="https://torstenwalter.github.io/osx/shell/fish/2017/07/26/fish-shell.html" rel="alternate" type="text/html" title="How to install and configure fish shell on OSX" /><published>2017-07-26T10:00:00+00:00</published><updated>2017-07-26T10:00:00+00:00</updated><id>https://torstenwalter.github.io/osx/shell/fish/2017/07/26/fish-shell</id><content type="html" xml:base="https://torstenwalter.github.io/osx/shell/fish/2017/07/26/fish-shell.html">&lt;p&gt;&lt;a href=&quot;https://fishshell.com/&quot;&gt;fish&lt;/a&gt; is a very nice shell with autocompletion out of the box. I find it extremely useful.
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.3.1">Jekyll</generator><link href="https://torstenwalter.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://torstenwalter.github.io/" rel="alternate" type="text/html" /><updated>2017-08-04T11:20:46+00:00</updated><id>https://torstenwalter.github.io/</id><title type="html">Torsten Walter</title><subtitle></subtitle><entry><title type="html">How to run nginx on OpenShift?</title><link href="https://torstenwalter.github.io/openshift/nginx/2017/08/04/nginx-on-openshift.html" rel="alternate" type="text/html" title="How to run nginx on OpenShift?" /><published>2017-08-04T11:00:00+00:00</published><updated>2017-08-04T11:00:00+00:00</updated><id>https://torstenwalter.github.io/openshift/nginx/2017/08/04/nginx-on-openshift</id><content type="html" xml:base="https://torstenwalter.github.io/openshift/nginx/2017/08/04/nginx-on-openshift.html">&lt;div id=&quot;toc&quot; class=&quot;toc&quot;&gt;
+&lt;div id=&quot;toctitle&quot;&gt;Table of Contents&lt;/div&gt;
+&lt;ul class=&quot;sectlevel1&quot;&gt;
+&lt;li&gt;&lt;a href=&quot;#fix_file_and_directory_permissions&quot;&gt;Fix file and directory permissions&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;#fix_used_port&quot;&gt;Fix used port&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;#remove_user_directive&quot;&gt;Remove user directive&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;#dockerfile&quot;&gt;Dockerfile&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;#run_nginx_in_openshift&quot;&gt;Run nginx in OpenShift&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;The official &lt;a href=&quot;http://nginx.org/&quot;&gt;NGINX&lt;/a&gt; docker container published on &lt;a href=&quot;https://hub.docker.com/_/nginx/&quot;&gt;docker hub&lt;/a&gt; does not run on Openshift,
+because of OpenShift security constraints. If you want to learn more about it continue reading otherwise you could jump directly to &lt;a href=&quot;#run_nginx_in_openshift&quot;&gt;Run nginx in OpenShift&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;To quote from &lt;a href=&quot;https://docs.openshift.com/container-platform/3.5/creating_images/guidelines.html#openshift-container-platform-specific-guidelines&quot;&gt;OpenShift Container Platform-Specific Guidelines&lt;/a&gt;:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;quoteblock&quot;&gt;
+&lt;blockquote&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Support Arbitrary User IDs&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;By default, OpenShift Container Platform runs containers using an arbitrarily assigned user ID. This provides additional security against processes escaping the container due to a container engine vulnerability and thereby achieving escalated permissions on the host node.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;For an image to support running as an arbitrary user, directories and files that may be written to by processes in the image should be owned by the root group and be read/writable by that group. Files to be executed should also have group execute permissions.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/blockquote&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;fix_file_and_directory_permissions&quot;&gt;Fix file and directory permissions&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Let&amp;#8217;s chack the nginx configuration file for possible file or directory permission problems.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;/etc/nginx/nginx.conf&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;user  nginx;
+worker_processes  1;
+
+error_log  /var/log/nginx/error.log warn; &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+pid        /var/run/nginx.pid; &lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;(2)&lt;/b&gt;
+
+
+events {
+    worker_connections  1024;
+}
+
+
+http {
+    include       /etc/nginx/mime.types; &lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;(3)&lt;/b&gt;
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] &quot;$request&quot; '
+                      '$status $body_bytes_sent &quot;$http_referer&quot; '
+                      '&quot;$http_user_agent&quot; &quot;$http_x_forwarded_for&quot;';
+
+    access_log  /var/log/nginx/access.log  main; &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    keepalive_timeout  65;
+
+    #gzip  on;
+
+    include /etc/nginx/conf.d/*.conf; &lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;(4)&lt;/b&gt;
+}&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;colist arabic&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;1&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;/var/log/nginx&lt;/code&gt; - the directory for nginx logs needs to be writeable by group &lt;code&gt;root&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;2&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;/var/run&lt;/code&gt; - the nginx.pid file is written there so we need write permissions here is well&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;3&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;/etc/nginx/mime.types&lt;/code&gt; - read permissions will do in this case&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;4&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;/etc/nginx/conf.d/&lt;/code&gt; - as nginx should not write to configuration files read permissions are sufficient&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;In addition nginx writes files to &lt;code&gt;/var/cache/nginx&lt;/code&gt;&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Let&amp;#8217;s check the permissions for these files and directories:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;ulist&quot;&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;run the official nginx docker image:&lt;/p&gt;
+&lt;div class=&quot;literalblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;docker run -it nginx:latest /bin/bash&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;check the owner, group and permissions&lt;/p&gt;
+&lt;div class=&quot;literalblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;ls -aldH /var/log/nginx /var/run /etc/nginx /etc/nginx/mime.types /etc/nginx/conf.d /var/cache/nginx&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;literalblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;drwxr-xr-x 3 root root 4096 Jul 26 07:33 /etc/nginx
+drwxr-xr-x 2 root root 4096 Jul 26 07:33 /etc/nginx/conf.d
+-rw-r--r-- 1 root root 3957 Jul 11 13:06 /etc/nginx/mime.types
+drwxr-xr-x 2 root root 4096 Jul 11 13:06 /var/cache/nginx
+drwxr-xr-x 1 root root 4096 Jul 26 07:34 /var/log/nginx
+drwxr-xr-x 4 root root 4096 Jul 23 00:00 /var/run&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;As you can see we need to correct the permissions for &lt;code&gt;/var/cache/nginx&lt;/code&gt;, &lt;code&gt;/var/log/nginx&lt;/code&gt; and &lt;code&gt;/var/run&lt;/code&gt;. The neccessary command to do so is:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;CodeRay highlight&quot;&gt;&lt;code&gt;chmod g+rwx /var/cache/nginx /var/run /var/log/nginx&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;fix_used_port&quot;&gt;Fix used port&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;A side effect of running as an arbitrary user we can&amp;#8217;t listen to port 80 as the official nginx docker image does, as privileged ports can only be used by root.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;/etc/nginx/conf.d/default.conf&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;server {
+    listen       80; &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+    server_name  localhost;
+
+    #charset koi8-r;
+    #access_log  /var/log/nginx/host.access.log  main;
+
+    location / {
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+    }
+
+    #error_page  404              /404.html;
+
+    # redirect server error pages to the static page /50x.html
+    #
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+
+    # proxy the PHP scripts to Apache listening on 127.0.0.1:80
+    #
+    #location ~ \.php$ {
+    #    proxy_pass   http://127.0.0.1;
+    #}
+
+    # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+    #
+    #location ~ \.php$ {
+    #    root           html;
+    #    fastcgi_pass   127.0.0.1:9000;
+    #    fastcgi_index  index.php;
+    #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+    #    include        fastcgi_params;
+    #}
+
+    # deny access to .htaccess files, if Apache's document root
+    # concurs with nginx's one
+    #
+    #location ~ /\.ht {
+    #    deny  all;
+    #}
+}&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;colist arabic&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;1&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;listen port is 80&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;We can change the port unsing an in-place sed expression:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;CodeRay highlight&quot;&gt;&lt;code&gt;sed -i.bak 's/listen\(.*\)80;/listen 8081;/' /etc/nginx/conf.d/default.conf&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;remove_user_directive&quot;&gt;Remove user directive&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;If you start nginx with the modifications from above the following error message is shown:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;2017/08/04 06:51:55 [warn] 1#1: the &quot;user&quot; directive makes sense only if the master process runs with super-user privileges, ignored in /etc/nginx/nginx.conf:2
+nginx: [warn] the &quot;user&quot; directive makes sense only if the master process runs with super-user privileges, ignored in /etc/nginx/nginx.conf:2&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;This directive is listed on the first line of nginx.conf&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;/etc/nginx/nginx.conf&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;user  nginx;
+worker_processes  1;
+
+error_log  /var/log/nginx/error.log warn;
+...&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;We can comment the user directive with a simple sed expression like:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;RUN sed -i.bak 's/^user/#user/' /etc/nginx/nginx.conf&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;dockerfile&quot;&gt;Dockerfile&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;The following Dockerfile can be used to fix the problems with the official nginx docker image so that it can be run on OpenShift:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Dockerfile&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;FROM nginx:stable
+
+# support running as arbitrary user which belogs to the root group
+RUN chmod g+rwx /var/cache/nginx /var/run /var/log/nginx
+# users are not allowed to listen on priviliged ports
+RUN sed -i.bak 's/listen\(.*\)80;/listen 8081;/' /etc/nginx/conf.d/default.conf
+EXPOSE 8081
+# comment user directive as master process is run as user in OpenShift anyhow
+RUN sed -i.bak 's/^user/#user/' /etc/nginx/nginx.conf&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;So that you don&amp;#8217;t have to do this I created docker images with these modifications in &lt;a href=&quot;https://hub.docker.com/r/twalter/openshift-nginx/&quot; class=&quot;bare&quot;&gt;https://hub.docker.com/r/twalter/openshift-nginx/&lt;/a&gt;.
+The tags follow the official nginx tags. All images should automatically be rebuilt whenever the official nginx images are rebuilt.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;run_nginx_in_openshift&quot;&gt;Run nginx in OpenShift&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;So finally we can use nginx in OpenShift:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;CodeRay highlight&quot;&gt;&lt;code&gt;oc new-app twalter/openshift-nginx:stable --name nginx-stable
+oc expose svc nginx-stable --port=8081&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;When you open the public route you should see the message &quot;Welcome to nginx!&quot;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Of course you can do the same with the other images:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;CodeRay highlight&quot;&gt;&lt;code&gt;oc new-app twalter/openshift-nginx:latest --name nginx-latest
+oc expose svc nginx-latest --port=8081&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;The alpine versions are available as well:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;CodeRay highlight&quot;&gt;&lt;code&gt;oc new-app twalter/openshift-nginx:mainline-alpine --name nginx-mainline-alpine
+oc expose svc nginx-mainline-alpine --port=8081&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;If you want to use a template to create a deployment config, service and route for nginx
+you could use &lt;a href=&quot;https://raw.githubusercontent.com/torstenwalter/openshift-nginx/master/tests/nginx-template.yml&quot;&gt;this one&lt;/a&gt; as basis. I am actually using it to test the built nginx images with
+the modifications described above.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;CodeRay highlight&quot;&gt;&lt;code&gt;oc process -f https://raw.githubusercontent.com/torstenwalter/openshift-nginx/master/tests/nginx-template.yml NAME=nginx-stable-alpine NGINX_VERSION=stable-alpine |oc apply -f -&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;</content><author><name></name></author></entry><entry><title type="html">How to install and configure fish shell on OSX</title><link href="https://torstenwalter.github.io/osx/shell/fish/2017/07/26/fish-shell.html" rel="alternate" type="text/html" title="How to install and configure fish shell on OSX" /><published>2017-07-26T10:00:00+00:00</published><updated>2017-07-26T10:00:00+00:00</updated><id>https://torstenwalter.github.io/osx/shell/fish/2017/07/26/fish-shell</id><content type="html" xml:base="https://torstenwalter.github.io/osx/shell/fish/2017/07/26/fish-shell.html">&lt;p&gt;&lt;a href=&quot;https://fishshell.com/&quot;&gt;fish&lt;/a&gt; is a very nice shell with autocompletion out of the box. I find it extremely useful.
 This explains how you can install it on OS X using homebrew and make it even better by using a popwerline style prompt.&lt;/p&gt;
 
 &lt;h2 id=&quot;install-fish-shell&quot;&gt;Install fish shell&lt;/h2&gt;
