@@ -1,0 +1,583 @@
+---
+layout: post
+title:  "How to use nginx as a sidecar container to encrypt network traffic on OpenShift?"
+date:   2017-08-07 12:00:00 +0200
+categories: openshift nginx sidecar tls encryption certificates
+---
+:toc:
+
+OpenShift allows you to secure your applications by using secured routes. This way TLS termination
+can be done at the edge router and traffic from the outside to your router is encrypted.
+
+Traffic from the router to the application is still unencrypted. If you want added security it's possible to encrypt
+this traffic as well. This article shows you how nginx can be used as a sidecar container to do the tls termination for
+your pod.
+
+
+
+== Basic template with TLS termination at the edge router
+Let's start with a simple deployment template: consisting og: A deployment config, one service and a route which is configured to do tls termination.
+
+generic-template.yml
+[source,yml,options="nowrap"]
+----
+apiVersion: v1
+kind: Template
+metadata:
+  name: generic-template
+  annotations:
+    description: "A generic template which creates a DeploymentConfig, Service and Route for a given docker image"
+    tags: "webserver"
+objects:
+- apiVersion: v1
+  kind: DeploymentConfig // <1>
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    replicas: 1
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+          deploymentconfig: ${NAME}
+      spec:
+        containers:
+        - image: ${DOCKER_IMAGE}
+          imagePullPolicy: Always
+          name: application
+          ports:
+          - containerPort: "${{CONTAINER_PORT}}"
+            protocol: TCP
+          terminationMessagePath: /dev/termination-log
+    triggers: {}
+- apiVersion: v1
+  kind: Service // <2>
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    ports:
+    - port: "${{CONTAINER_PORT}}"
+      protocol: TCP
+      targetPort: "${{CONTAINER_PORT}}"
+      name: http
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+- apiVersion: v1
+  kind: Route // <3>
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    port:
+      targetPort: "${{CONTAINER_PORT}}"
+    to:
+      kind: Service
+      name: ${NAME}
+    tls:
+      termination: edge
+parameters:
+- name: NAME
+  description: The name for the deployment config, service and route
+  required: true
+- name: DOCKER_IMAGE
+  description:
+  required: true
+- name: CONTAINER_PORT
+  description: The port which will be exposed as service and route
+  value: "8080"
+----
+The template is contains the following components:
+
+<1> A deployment config which uses the `NAME` and `DOCKER_IMAGE` parameters to run the application and specified the `CONTAINER_PORT`.
+<2> A service routing traffic to the pod(s) instantiated by the DeploymentConfig.
+<3> A route exposing the service and doing tls termination at the `edge` router.
+
+
+
+You can use this template by applying the parameters and starting a manual deployment (as the triggers are set to be empty).
+The example below uses it to instantiate a jenkins instance:
+
+[source,bash,options="nowrap"]
+----
+oc process -f generic-template.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
+oc rollout latest dc/jenkins
+----
+
+After a short moment the application should be running and being accessible via https.
+
+
+== Enhanced template with TLS encryption from the edge router to the application
+Now that we have the application running we can extend the template to include nginx as a second container in our
+deployment which should do TLS termination for traffic from the edge router and forward it to our application. As both
+containers are part of the same POD they will be placed on the same node and one can reach each other via localhost and
+no network traffic between the two goes over the wire.
+
+
+
+=== Add nginx image
+
+As first step let's add the nginx image and route traffice to nginx instead of our container.
+This way we can check if nginx is working.
+
+[source,yml,options="nowrap"]
+----
+apiVersion: v1
+kind: Template
+metadata:
+  name: generic-template
+  annotations:
+    description: "A generic template which creates a DeploymentConfig, Service and Route for a given docker image"
+    tags: "webserver"
+objects:
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    replicas: 1
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+          deploymentconfig: ${NAME}
+      spec:
+        containers:
+        - image: ${DOCKER_IMAGE}
+          imagePullPolicy: Always
+          name: application
+          ports:
+          - containerPort: "${{CONTAINER_PORT}}"
+            protocol: TCP
+          terminationMessagePath: /dev/termination-log
+        - image: twalter/openshift-nginx:stable-alpine // <1>
+          imagePullPolicy: Always                      // <1>
+          name: nginx                                  // <1>
+          ports:                                       // <1>
+          - containerPort: 8081                        // <1>
+            protocol: TCP                              // <1>
+    triggers: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    ports:
+    - port: 8081       // <2>
+      protocol: TCP
+      targetPort: 8081 // <2>
+      name: http
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+- apiVersion: v1
+  kind: Route
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    port:
+      targetPort: 8081 // <2>
+    to:
+      kind: Service
+      name: ${NAME}
+    tls:
+      termination: edge
+parameters:
+- name: NAME
+  description: The name for the deployment config, service and route
+  required: true
+- name: DOCKER_IMAGE
+  description:
+  required: true
+- name: CONTAINER_PORT
+  description: The port which will be exposed as service and route
+  value: "8080"
+----
+
+<1> These lines add nginx and expose port 8081. Notice that we use twalter/openshift-nginx instead of nginx, because the official one does not run on OpenShift.
+<2> Forward all traffic to port 8081 where nginx is listening.
+
+We can now apply this template:
+[source,bash,options="nowrap"]
+----
+oc process -f generic-template.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
+oc rollout latest dc/jenkins
+----
+We should see a "Welcome to nginx!" page.
+
+=== Forward the traffic to our application
+
+Now that nginx is running we can configure it to forward incoming requests to our application.
+
+[source,yml,options="nowrap"]
+----
+apiVersion: v1
+kind: Template
+metadata:
+  name: generic-template
+  annotations:
+    description: "A generic template which creates a DeploymentConfig, Service and Route for a given docker image"
+    tags: "webserver"
+objects:
+- kind: ConfigMap                           // <1>
+  apiVersion: v1                            // <1>
+  metadata:                                 // <1>
+    name: ${NAME}-nginx-config              // <1>
+  data:                                     // <1>
+    grafana-nginx.conf: |                   // <1>
+      server {                              // <1>
+        listen 8081;                        // <1> <2>
+        index index.html index.htm;         // <1>
+
+        location / {                        // <1>
+         proxy_pass http://localhost:8080/; // <1>
+        }                                   // <1>
+      }                                     // <1>
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    replicas: 1
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+          deploymentconfig: ${NAME}
+      spec:
+        containers:
+        - image: ${DOCKER_IMAGE}
+          imagePullPolicy: Always
+          name: application
+          ports:
+          - containerPort: "${{CONTAINER_PORT}}"
+            protocol: TCP
+          terminationMessagePath: /dev/termination-log
+        - image: twalter/openshift-nginx:stable-alpine
+          imagePullPolicy: Always
+          name: nginx
+          ports:
+          - containerPort: 8081
+            protocol: TCP
+          volumeMounts:                       // <4>
+          - mountPath: /etc/nginx/conf.d/     // <4>
+            name: nginx-config-volume // <4>
+        initContainers:
+        - name: init-mydb
+          image: busybox
+          command: ['sh', '-c', 'until nslookup mydb; do echo waiting for mydb; sleep 2; done;']
+        volumes:                             // <3>
+        - configMap:                         // <3>
+            defaultMode: 420                 // <3>
+            name: ${NAME}-nginx-config       // <3>
+          name: nginx-config-volume  // <3>
+    triggers: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    ports:
+    - port: 8081
+      protocol: TCP
+      targetPort: 8081
+      name: http
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+- apiVersion: v1
+  kind: Route
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    port:
+      targetPort: 8081
+    to:
+      kind: Service
+      name: ${NAME}
+    tls:
+      termination: edge
+parameters:
+- name: NAME
+  description: The name for the deployment config, service and route
+  required: true
+- name: DOCKER_IMAGE
+  description:
+  required: true
+- name: CONTAINER_PORT
+  description: The port which will be exposed as service and route
+  value: "8080"
+----
+<1> We use a config map to provide the nginx configuration file
+<2> Note that the port is hardcoded in the file so it needs to be adapted in case your application uses a different one.
+<3> Configure the config map as volume
+<4> Mount the volume into the nginx container
+
+After applying this template we should see the our application again.
+[source,bash,options="nowrap"]
+----
+oc process -f generic-template.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
+oc rollout latest dc/jenkins
+----
+We should see a "Welcome to nginx!" page.
+
+
+
+=== Securing traffic from the edge router to nginx
+
+Service serving certificate secrets
+First of all we need a certificate in order to do TLS. Luckily OpenShift has a feature called https://docs.openshift.com/online/dev_guide/secrets.html#service-serving-certificate-secrets[Service Serving Certificate Secrets]
+which allows to generate certificates. All we need to do is to add the annotation as shown below:
+[source,yml,options="nowrap"]
+----
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+    annotations:                                                        // <1>
+      service.alpha.openshift.io/serving-cert-secret-name: ${NAME}-cert // <1>
+  spec:
+    ports:
+    - port: "${{CONTAINER_PORT}}"
+      protocol: TCP
+      targetPort: "${{CONTAINER_PORT}}"
+      name: http
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+
+----
+
+<1> The necessary annotation to let OpenShift generate a certificate for us.
+
+Once we apply this configuration we can check if the secret has been generated for us:
+
+[source,bash,options="nowrap"]
+----
+oc get secrets
+
+NAME                       TYPE                                  DATA      AGE
+builder-dockercfg-vdw69    kubernetes.io/dockercfg               1         1h
+builder-token-303tx        kubernetes.io/service-account-token   4         1h
+builder-token-l1npj        kubernetes.io/service-account-token   4         1h
+default-dockercfg-2mndj    kubernetes.io/dockercfg               1         1h
+default-token-bxvrc        kubernetes.io/service-account-token   4         1h
+default-token-t0c70        kubernetes.io/service-account-token   4         1h
+deployer-dockercfg-7dbgn   kubernetes.io/dockercfg               1         1h
+deployer-token-1r1fk       kubernetes.io/service-account-token   4         1h
+deployer-token-k4qq7       kubernetes.io/service-account-token   4         1h
+jenkins-cert               kubernetes.io/tls                     2         16m // <1>
+----
+
+<1> generated tls secret
+
+Now let's use this certificate to secure nginx:
+
+generic-template-with-internal-encryption.yml
+----
+apiVersion: v1
+kind: Template
+metadata:
+  name: generic-template
+  annotations:
+    description: "A generic template which creates a DeploymentConfig, Service and Route for a given docker image"
+    tags: "webserver"
+objects:
+- kind: ConfigMap
+  apiVersion: v1
+  metadata:
+    name: ${NAME}-nginx-config
+  data:
+    grafana-nginx.conf: |
+      server {
+        listen 8443 ssl;                               // <4>
+        ssl_certificate /etc/nginx/certs/tls.crt;      // <4>
+        ssl_certificate_key /etc/nginx/certs/tls.key;  // <4>
+        index index.html index.htm;
+
+        location / {
+         proxy_pass http://localhost:8080/;
+        }
+      }
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    replicas: 1
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+          deploymentconfig: ${NAME}
+      spec:
+        containers:
+        - image: ${DOCKER_IMAGE}
+          imagePullPolicy: Always
+          name: application
+          ports:
+          - containerPort: "${{CONTAINER_PORT}}"
+            protocol: TCP
+          terminationMessagePath: /dev/termination-log
+        - image: twalter/openshift-nginx:stable-alpine
+          imagePullPolicy: Always
+          name: nginx
+          ports:
+          - containerPort: 8443 // <5>
+            protocol: TCP
+          volumeMounts:
+          - mountPath: /etc/nginx/conf.d/
+            name: nginx-config-volume
+          - mountPath: /etc/nginx/certs  // <3>
+            name: nginx-cert-volume      // <3>
+        initContainers:
+        - name: init-mydb
+          image: busybox
+          command: ['sh', '-c', 'until nslookup mydb; do echo waiting for mydb; sleep 2; done;']
+        volumes:
+        - configMap:
+            defaultMode: 420
+            name: ${NAME}-nginx-config
+          name: nginx-config-volume
+        - secret:                    // <2>
+            secretName: ${NAME}-cert // <2>
+          name: nginx-cert-volume    // <2>
+    triggers: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+    annotations:
+      service.alpha.openshift.io/serving-cert-secret-name: ${NAME}-cert  // <1>
+  spec:
+    ports:
+    - port: 8443 // <5>
+      protocol: TCP
+      targetPort: 8443 // <5>
+      name: http
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+- apiVersion: v1
+  kind: Route
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    port:
+      targetPort: 8443 // <5>
+    to:
+      kind: Service
+      name: ${NAME}
+    tls:
+      termination: reencrypt  // <6>
+      insecureEdgeTerminationPolicy: Redirect // <8>
+      destinationCACertificate: |-            // <7>
+        -----BEGIN CERTIFICATE-----
+        MIIC6jCCAdKgAwIBAgIBATANBgkqhkiG9w0BAQsFADAmMSQwIgYDVQQDDBtvcGVu
+        c2hpZnQtc2lnbmVyQDE1MDE1OTkwMjIwHhcNMTcwODAxMTQ1MDIxWhcNMjIwNzMx
+        MTQ1MDIyWjAmMSQwIgYDVQQDDBtvcGVuc2hpZnQtc2lnbmVyQDE1MDE1OTkwMjIw
+        ggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC82yK5Tbda+qrQy3NTuJPK
+        UchalxsHafqNGz1b0iWFhD+kUovTPBZw67qfIbH7Rl+sVYECUXmWrkI3ctbr5ZXd
+        en2WDl5SsAjNodRiYHbxXGOEUUGhwykpWaD0+SxuA9ZNrMEGzxJlueSfhC1zWKE6
+        HR+q5lfxlFyY0/+BX2AgmvQDWS9fElwgnbLc+pQSfHAWFQ+ic7pPemxh468WjTIY
+        N2mT4lHLgjYRNf7GpC5TrNaA5FrUZ8hIevjtrlKDaSJian6rjJOinuACI2iQmHDm
+        e91LJLVvZmhiehwMGyAuDqaCvPBHF8TwNxFzj5TUzCY3c9Kr8HeClHxUhTYRsD+h
+        AgMBAAGjIzAhMA4GA1UdDwEB/wQEAwICpDAPBgNVHRMBAf8EBTADAQH/MA0GCSqG
+        SIb3DQEBCwUAA4IBAQAF6uaque2iQ7RD4sqoziIIKVaHgc4YFfOfRkt9ZQ4Fhd6R
+        VJKduVcqeBYPuzgXkPn/qZRDEVOTxwu7luqBg/+nbShKZ1fIT4/gKaSzQVFW/wPP
+        vWfTHrWTPbeYNBq2/00BkpGRT2M9T/KOKOVwmfN7x7uPdsmuThRlKpnb3we3riql
+        PogX0pjvyggLv0gREKWKiRSFg9ngZfLuQR0nxvbRxRoPVaefQwTr9GTIU69SWxWX
+        fyuoKFEGWbVN+DGCfPLRXMfvpxLjJiYoMK9VdL1rPX+C5evlDnA+U8MQhek+PgH5
+        BNGyLtH/x68Y+wQ4k4m8A/+/Lp43r8n5e1Kb5R/w
+        -----END CERTIFICATE-----
+
+        -----BEGIN CERTIFICATE-----
+        MIIDCjCCAfKgAwIBAgIBATANBgkqhkiG9w0BAQsFADA2MTQwMgYDVQQDDCtvcGVu
+        c2hpZnQtc2VydmljZS1zZXJ2aW5nLXNpZ25lckAxNTAxNTk5MDIyMB4XDTE3MDgw
+        MTE0NTAyMloXDTIyMDczMTE0NTAyM1owNjE0MDIGA1UEAwwrb3BlbnNoaWZ0LXNl
+        cnZpY2Utc2VydmluZy1zaWduZXJAMTUwMTU5OTAyMjCCASIwDQYJKoZIhvcNAQEB
+        BQADggEPADCCAQoCggEBAKxHhXqzbxfzHCT0gDQEVbnJvMVs+KVvYK9sP20sGhua
+        9rJR9S8CaRhFWsqC7R0FxMfJgWKeLU2IXC7cPKNjYVpC5Yp8jkSXsd9fRXOuky5F
+        WW+FYUBWSZwgSdASk33pqUYllcNUbpVJWCPYVJOX1Gh4Pra8GrycgbcNOYm40mYb
+        +nJFzjON9ISBIdinclS545aK9FVbJesy4Gia8zOItiKakZLFLP9shQjTDS5mliWe
+        pl0wBaB7h/Cg7aI3/SVlsABE1dJyxpd3fE0NhLdB70/+SNEIoDIc7o5gQsJHvF+e
+        yXxNeNoVXQAaXE+bBKq2lJkA4ivZi3Vmf1BDSba7as0CAwEAAaMjMCEwDgYDVR0P
+        AQH/BAQDAgKkMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAHGi
+        CfxsWysSLhHfIC2crIO5WoarBa3BrZapQhECe4pcI7mqISFPLVO5rpXx2iBw+QrK
+        vjWeAd/8G9HueA7GcGkgolmcHHAJwJ/Xj9Kkt8exKxnfDoRwYHKBDaUA9w8HyFHx
+        EMOlbNfaO2o2p1FcfZ1SCxoKcNhMt1mpOZVT9sGZV5o/x3o247GqZdIDrpLpz8xq
+        Lv7/3WlLwOhkGfLPY8Vi+gZ24oeZijtReVM7WZ/SpQ2O/Xo+cfkUYnDxyibJ6NEl
+        eIzIGQw80rLK72pYYwbcOFd1xOYQx2hsDAEY2wRP6QvLAtUHf+DrZj0xkHZmkolp
+        QGPHERXkiLqNBtyY/Rk=
+        -----END CERTIFICATE-----
+parameters:
+- name: NAME
+  description: The name for the deployment config, service and route
+  required: true
+- name: DOCKER_IMAGE
+  description:
+  required: true
+- name: CONTAINER_PORT
+  description: The port which will be exposed as service and route
+  value: "8080"
+----
+<1> add annotation to the route to let OpenShift generate the certificate secret for us
+<2> configure secret as volume
+<3> mount the secret to our nginx container
+<4> update nginx configuration to listen on port 8443 using ssl with the provided certificates
+<5> use port 8443 instead of 8081 just to make clear that we are using encryption
+<6> tell openshift to re-encrypt incoming traffic to the router before forwarding it to the service
+<7> configure the certificate which should be used to validate the certificate used in nginx. You need to replace this
+    certificate with the one from your installation. You can retrieve it from any pod by checking the file `/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt`.
+   In OpenShift 3.6 it should no longer be necessary to configure this when using service serving certificates.
+<8> redirect insecure traffic to a secure schema (http -> https)
+
+That's the complete template.
+
+[source,bash,options="nowrap"]
+----
+oc process -f generic-template-with-internal-encryption.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
+oc rollout latest dc/jenkins
+----
+
+After applying it connection you can access your application and the traffic to and from the edge router is encrypted.
+
+
+Possible improvements: The port of the application should be injected into the nginx configuration as well.
