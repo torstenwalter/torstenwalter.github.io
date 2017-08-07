@@ -1,4 +1,699 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.3.1">Jekyll</generator><link href="https://torstenwalter.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://torstenwalter.github.io/" rel="alternate" type="text/html" /><updated>2017-08-04T11:20:46+00:00</updated><id>https://torstenwalter.github.io/</id><title type="html">Torsten Walter</title><subtitle></subtitle><entry><title type="html">How to run nginx on OpenShift?</title><link href="https://torstenwalter.github.io/openshift/nginx/2017/08/04/nginx-on-openshift.html" rel="alternate" type="text/html" title="How to run nginx on OpenShift?" /><published>2017-08-04T11:00:00+00:00</published><updated>2017-08-04T11:00:00+00:00</updated><id>https://torstenwalter.github.io/openshift/nginx/2017/08/04/nginx-on-openshift</id><content type="html" xml:base="https://torstenwalter.github.io/openshift/nginx/2017/08/04/nginx-on-openshift.html">&lt;div id=&quot;toc&quot; class=&quot;toc&quot;&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.3.1">Jekyll</generator><link href="https://torstenwalter.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="https://torstenwalter.github.io/" rel="alternate" type="text/html" /><updated>2017-08-07T14:18:50+00:00</updated><id>https://torstenwalter.github.io/</id><title type="html">Torsten Walter</title><subtitle></subtitle><entry><title type="html">How to use nginx as a sidecar container to encrypt network traffic on OpenShift?</title><link href="https://torstenwalter.github.io/openshift/nginx/sidecar/tls/encryption/certificates/2017/08/07/nginx-as-sidecar-container-to-secure-openshift-traffic.html" rel="alternate" type="text/html" title="How to use nginx as a sidecar container to encrypt network traffic on OpenShift?" /><published>2017-08-07T10:00:00+00:00</published><updated>2017-08-07T10:00:00+00:00</updated><id>https://torstenwalter.github.io/openshift/nginx/sidecar/tls/encryption/certificates/2017/08/07/nginx-as-sidecar-container-to-secure-openshift-traffic</id><content type="html" xml:base="https://torstenwalter.github.io/openshift/nginx/sidecar/tls/encryption/certificates/2017/08/07/nginx-as-sidecar-container-to-secure-openshift-traffic.html">&lt;div id=&quot;toc&quot; class=&quot;toc&quot;&gt;
+&lt;div id=&quot;toctitle&quot;&gt;Table of Contents&lt;/div&gt;
+&lt;ul class=&quot;sectlevel1&quot;&gt;
+&lt;li&gt;&lt;a href=&quot;#basic_template_with_tls_termination_at_the_edge_router&quot;&gt;Basic template with TLS termination at the edge router&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;#enhanced_template_with_tls_encryption_from_the_edge_router_to_the_application&quot;&gt;Enhanced template with TLS encryption from the edge router to the application&lt;/a&gt;
+&lt;ul class=&quot;sectlevel2&quot;&gt;
+&lt;li&gt;&lt;a href=&quot;#add_nginx_image&quot;&gt;Add nginx image&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;#forward_the_traffic_to_our_application&quot;&gt;Forward the traffic to our application&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;#securing_traffic_from_the_edge_router_to_nginx&quot;&gt;Securing traffic from the edge router to nginx&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;OpenShift allows you to secure your applications by using secured routes. This way TLS termination
+can be done at the edge router and traffic from the outside to your router is encrypted.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Traffic from the router to the application is still unencrypted. If you want added security it&amp;#8217;s possible to encrypt
+this traffic as well. This article shows you how nginx can be used as a sidecar container to do the tls termination for
+your pod.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;basic_template_with_tls_termination_at_the_edge_router&quot;&gt;Basic template with TLS termination at the edge router&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Let&amp;#8217;s start with a simple deployment template: consisting og: A deployment config, one service and a route which is configured to do tls termination.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;generic-template.yml&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;CodeRay highlight nowrap&quot;&gt;&lt;code data-lang=&quot;yml&quot;&gt;&lt;span class=&quot;key&quot;&gt;apiVersion&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;v1&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;key&quot;&gt;kind&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;Template&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;key&quot;&gt;metadata&lt;/span&gt;:
+  &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;generic-template&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;annotations&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;description&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;content&quot;&gt;A generic template which creates a DeploymentConfig, Service and Route for a given docker image&lt;/span&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;tags&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;content&quot;&gt;webserver&lt;/span&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;key&quot;&gt;objects&lt;/span&gt;:
+- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;apiVersion: v1&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;kind&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;DeploymentConfig &lt;/span&gt;&lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+  &lt;span class=&quot;key&quot;&gt;metadata&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;labels&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;spec&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;replicas&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;1&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;selector&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;deploymentconfig&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;template&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;metadata&lt;/span&gt;:
+        &lt;span class=&quot;key&quot;&gt;labels&lt;/span&gt;:
+          &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;deploymentconfig&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;spec&lt;/span&gt;:
+        &lt;span class=&quot;key&quot;&gt;containers&lt;/span&gt;:
+        - &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;image: ${DOCKER_IMAGE}&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;imagePullPolicy&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;Always&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;application&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;ports&lt;/span&gt;:
+          - &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;containerPort: &amp;quot;${{CONTAINER_PORT}}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+            &lt;span class=&quot;key&quot;&gt;protocol&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;TCP&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;terminationMessagePath&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;/dev/termination-log&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;triggers&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;{}&lt;/span&gt;&lt;/span&gt;
+- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;apiVersion: v1&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;kind&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;Service &lt;/span&gt;&lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;(2)&lt;/b&gt;
+  &lt;span class=&quot;key&quot;&gt;metadata&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;labels&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;spec&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;ports&lt;/span&gt;:
+    - &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;port: &amp;quot;${{CONTAINER_PORT}}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;protocol&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;TCP&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;targetPort&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;content&quot;&gt;${{CONTAINER_PORT}}&lt;/span&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;http&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;selector&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;deploymentconfig&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;apiVersion: v1&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;kind&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;Route &lt;/span&gt;&lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;(3)&lt;/b&gt;
+  &lt;span class=&quot;key&quot;&gt;metadata&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;labels&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;spec&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;port&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;targetPort&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;content&quot;&gt;${{CONTAINER_PORT}}&lt;/span&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;to&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;kind&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;Service&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;tls&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;termination&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;edge&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;key&quot;&gt;parameters&lt;/span&gt;:
+- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;name: NAME&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;description&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;The name for the deployment config, service and route&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;required&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;true&lt;/span&gt;&lt;/span&gt;
+- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;name: DOCKER_IMAGE&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;description&lt;/span&gt;:
+  &lt;span class=&quot;key&quot;&gt;required&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;true&lt;/span&gt;&lt;/span&gt;
+- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;name: CONTAINER_PORT&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;description&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;The port which will be exposed as service and route&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;value&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;content&quot;&gt;8080&lt;/span&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;The template is contains the following components:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;colist arabic&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;1&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;A deployment config which uses the &lt;code&gt;NAME&lt;/code&gt; and &lt;code&gt;DOCKER_IMAGE&lt;/code&gt; parameters to run the application and specified the &lt;code&gt;CONTAINER_PORT&lt;/code&gt;.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;2&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;A service routing traffic to the pod(s) instantiated by the DeploymentConfig.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;3&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;A route exposing the service and doing tls termination at the &lt;code&gt;edge&lt;/code&gt; router.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;You can use this template by applying the parameters and starting a manual deployment (as the triggers are set to be empty).
+The example below uses it to instantiate a jenkins instance:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;CodeRay highlight nowrap&quot;&gt;&lt;code data-lang=&quot;bash&quot;&gt;oc process -f generic-template.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
+oc rollout latest dc/jenkins&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;After a short moment the application should be running and being accessible via https.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;enhanced_template_with_tls_encryption_from_the_edge_router_to_the_application&quot;&gt;Enhanced template with TLS encryption from the edge router to the application&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Now that we have the application running we can extend the template to include nginx as a second container in our
+deployment which should do TLS termination for traffic from the edge router and forward it to our application. As both
+containers are part of the same POD they will be placed on the same node and one can reach each other via localhost and
+no network traffic between the two goes over the wire.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect2&quot;&gt;
+&lt;h3 id=&quot;add_nginx_image&quot;&gt;Add nginx image&lt;/h3&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;As first step let&amp;#8217;s add the nginx image and route traffice to nginx instead of our container.
+This way we can check if nginx is working.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;CodeRay highlight nowrap&quot;&gt;&lt;code data-lang=&quot;yml&quot;&gt;&lt;span class=&quot;key&quot;&gt;apiVersion&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;v1&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;key&quot;&gt;kind&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;Template&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;key&quot;&gt;metadata&lt;/span&gt;:
+  &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;generic-template&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;annotations&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;description&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;content&quot;&gt;A generic template which creates a DeploymentConfig, Service and Route for a given docker image&lt;/span&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;tags&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;content&quot;&gt;webserver&lt;/span&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;key&quot;&gt;objects&lt;/span&gt;:
+- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;apiVersion: v1&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;kind&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;DeploymentConfig&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;metadata&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;labels&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;spec&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;replicas&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;1&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;selector&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;deploymentconfig&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;template&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;metadata&lt;/span&gt;:
+        &lt;span class=&quot;key&quot;&gt;labels&lt;/span&gt;:
+          &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;deploymentconfig&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;spec&lt;/span&gt;:
+        &lt;span class=&quot;key&quot;&gt;containers&lt;/span&gt;:
+        - &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;image: ${DOCKER_IMAGE}&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;imagePullPolicy&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;Always&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;application&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;ports&lt;/span&gt;:
+          - &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;containerPort: &amp;quot;${{CONTAINER_PORT}}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+            &lt;span class=&quot;key&quot;&gt;protocol&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;TCP&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;terminationMessagePath&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;/dev/termination-log&lt;/span&gt;&lt;/span&gt;
+        - &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;image: twalter/openshift-nginx:stable-alpine &lt;/span&gt;&lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+          &lt;span class=&quot;key&quot;&gt;imagePullPolicy&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;Always                      &lt;/span&gt;&lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+          &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;nginx                                  &lt;/span&gt;&lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+          &lt;span class=&quot;key&quot;&gt;ports&lt;/span&gt;:                                       &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+          - &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;containerPort: 8081                        &lt;/span&gt;&lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+            &lt;span class=&quot;key&quot;&gt;protocol&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;TCP                              &lt;/span&gt;&lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+    &lt;span class=&quot;key&quot;&gt;triggers&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;{}&lt;/span&gt;&lt;/span&gt;
+- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;apiVersion: v1&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;kind&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;Service&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;metadata&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;labels&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;spec&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;ports&lt;/span&gt;:
+    - &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;port: 8081       &lt;/span&gt;&lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;(2)&lt;/b&gt;
+      &lt;span class=&quot;key&quot;&gt;protocol&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;TCP&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;targetPort&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;8081 &lt;/span&gt;&lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;(2)&lt;/b&gt;
+      &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;http&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;selector&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;deploymentconfig&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;apiVersion: v1&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;kind&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;Route&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;metadata&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;labels&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;spec&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;port&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;targetPort&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;8081 &lt;/span&gt;&lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;(2)&lt;/b&gt;
+    &lt;span class=&quot;key&quot;&gt;to&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;kind&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;Service&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;tls&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;termination&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;edge&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;key&quot;&gt;parameters&lt;/span&gt;:
+- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;name: NAME&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;description&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;The name for the deployment config, service and route&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;required&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;true&lt;/span&gt;&lt;/span&gt;
+- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;name: DOCKER_IMAGE&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;description&lt;/span&gt;:
+  &lt;span class=&quot;key&quot;&gt;required&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;true&lt;/span&gt;&lt;/span&gt;
+- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;name: CONTAINER_PORT&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;description&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;The port which will be exposed as service and route&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;value&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;content&quot;&gt;8080&lt;/span&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;colist arabic&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;1&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;These lines add nginx and expose port 8081. Notice that we use twalter/openshift-nginx instead of nginx, because the official one does not run on OpenShift.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;2&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;Forward all traffic to port 8081 where nginx is listening.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;We can now apply this template:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;CodeRay highlight nowrap&quot;&gt;&lt;code data-lang=&quot;bash&quot;&gt;oc process -f generic-template.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
+oc rollout latest dc/jenkins&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;We should see a &quot;Welcome to nginx!&quot; page.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect2&quot;&gt;
+&lt;h3 id=&quot;forward_the_traffic_to_our_application&quot;&gt;Forward the traffic to our application&lt;/h3&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Now that nginx is running we can configure it to forward incoming requests to our application.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;CodeRay highlight nowrap&quot;&gt;&lt;code data-lang=&quot;yml&quot;&gt;&lt;span class=&quot;key&quot;&gt;apiVersion&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;v1&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;key&quot;&gt;kind&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;Template&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;key&quot;&gt;metadata&lt;/span&gt;:
+  &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;generic-template&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;annotations&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;description&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;content&quot;&gt;A generic template which creates a DeploymentConfig, Service and Route for a given docker image&lt;/span&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;tags&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;content&quot;&gt;webserver&lt;/span&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;key&quot;&gt;objects&lt;/span&gt;:
+- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;kind: ConfigMap                           &lt;/span&gt;&lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+  &lt;span class=&quot;key&quot;&gt;apiVersion&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;v1                            &lt;/span&gt;&lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+  &lt;span class=&quot;key&quot;&gt;metadata&lt;/span&gt;:                                 &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+    &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}-nginx-config              &lt;/span&gt;&lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+  &lt;span class=&quot;key&quot;&gt;data&lt;/span&gt;:                                     &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+    &lt;span class=&quot;key&quot;&gt;grafana-nginx.conf&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;delimiter&quot;&gt;|&lt;/span&gt;&lt;/span&gt;                   &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+      &lt;span class=&quot;error&quot;&gt;server {                              &lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+        &lt;span class=&quot;error&quot;&gt;listen 8081;                         &lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt; &lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;(2)&lt;/b&gt;
+        &lt;span class=&quot;error&quot;&gt;index index.html index.htm;         &lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+
+        &lt;span class=&quot;error&quot;&gt;location / {                        &lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+         &lt;span class=&quot;error&quot;&gt;proxy_pass http://localhost:8080/; &lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+        }                                   &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+      }                                     &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;apiVersion: v1&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;kind&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;DeploymentConfig&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;metadata&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;labels&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;spec&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;replicas&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;1&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;selector&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;deploymentconfig&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;template&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;metadata&lt;/span&gt;:
+        &lt;span class=&quot;key&quot;&gt;labels&lt;/span&gt;:
+          &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;deploymentconfig&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;spec&lt;/span&gt;:
+        &lt;span class=&quot;key&quot;&gt;containers&lt;/span&gt;:
+        - &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;image: ${DOCKER_IMAGE}&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;imagePullPolicy&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;Always&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;application&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;ports&lt;/span&gt;:
+          - &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;containerPort: &amp;quot;${{CONTAINER_PORT}}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+            &lt;span class=&quot;key&quot;&gt;protocol&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;TCP&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;terminationMessagePath&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;/dev/termination-log&lt;/span&gt;&lt;/span&gt;
+        - &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;image: twalter/openshift-nginx:stable-alpine&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;imagePullPolicy&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;Always&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;nginx&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;ports&lt;/span&gt;:
+          - &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;containerPort: 8081&lt;/span&gt;&lt;/span&gt;
+            &lt;span class=&quot;key&quot;&gt;protocol&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;TCP&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;volumeMounts&lt;/span&gt;:                       &lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;(4)&lt;/b&gt;
+          - &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;mountPath: /etc/nginx/conf.d/     &lt;/span&gt;&lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;(4)&lt;/b&gt;
+            &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;nginx-config-volume &lt;/span&gt;&lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;(4)&lt;/b&gt;
+        &lt;span class=&quot;key&quot;&gt;initContainers&lt;/span&gt;:
+        - &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;name: init-mydb&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;image&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;busybox&lt;/span&gt;&lt;/span&gt;
+          &lt;span class=&quot;key&quot;&gt;command&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;['sh', '-c', 'until nslookup mydb; do echo waiting for mydb; sleep 2; done;']&lt;/span&gt;&lt;/span&gt;
+        &lt;span class=&quot;key&quot;&gt;volumes&lt;/span&gt;:                             &lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;(3)&lt;/b&gt;
+        - &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;configMap:                         &lt;/span&gt;&lt;span class=&quot;content&quot;&gt;&lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;(3)&lt;/b&gt;
+            defaultMode: 420                 &lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;(3)&lt;/b&gt;
+            name: ${NAME}-nginx-config       &lt;/span&gt;&lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;(3)&lt;/b&gt;
+          &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;nginx-config-volume  &lt;/span&gt;&lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;(3)&lt;/b&gt;
+    &lt;span class=&quot;key&quot;&gt;triggers&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;{}&lt;/span&gt;&lt;/span&gt;
+- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;apiVersion: v1&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;kind&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;Service&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;metadata&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;labels&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;spec&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;ports&lt;/span&gt;:
+    - &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;port: 8081&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;protocol&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;TCP&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;targetPort&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;8081&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;http&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;selector&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;deploymentconfig&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;apiVersion: v1&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;kind&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;Route&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;metadata&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;labels&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;spec&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;port&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;targetPort&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;8081&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;to&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;kind&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;Service&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;tls&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;termination&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;edge&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;key&quot;&gt;parameters&lt;/span&gt;:
+- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;name: NAME&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;description&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;The name for the deployment config, service and route&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;required&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;true&lt;/span&gt;&lt;/span&gt;
+- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;name: DOCKER_IMAGE&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;description&lt;/span&gt;:
+  &lt;span class=&quot;key&quot;&gt;required&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;true&lt;/span&gt;&lt;/span&gt;
+- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;name: CONTAINER_PORT&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;description&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;The port which will be exposed as service and route&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;value&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;content&quot;&gt;8080&lt;/span&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;colist arabic&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;1&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;We use a config map to provide the nginx configuration file&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;2&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;Note that the port is hardcoded in the file so it needs to be adapted in case your application uses a different one.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;3&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;Configure the config map as volume&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;4&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;Mount the volume into the nginx container&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;After applying this template we should see the our application again.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;CodeRay highlight nowrap&quot;&gt;&lt;code data-lang=&quot;bash&quot;&gt;oc process -f generic-template.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
+oc rollout latest dc/jenkins&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;We should see a &quot;Welcome to nginx!&quot; page.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect2&quot;&gt;
+&lt;h3 id=&quot;securing_traffic_from_the_edge_router_to_nginx&quot;&gt;Securing traffic from the edge router to nginx&lt;/h3&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Service serving certificate secrets
+First of all we need a certificate in order to do TLS. Luckily OpenShift has a feature called &lt;a href=&quot;https://docs.openshift.com/online/dev_guide/secrets.html#service-serving-certificate-secrets&quot;&gt;Service Serving Certificate Secrets&lt;/a&gt;
+which allows to generate certificates. All we need to do is to add the annotation as shown below:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;CodeRay highlight nowrap&quot;&gt;&lt;code data-lang=&quot;yml&quot;&gt;- &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;apiVersion: v1&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;kind&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;Service&lt;/span&gt;&lt;/span&gt;
+  &lt;span class=&quot;key&quot;&gt;metadata&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;labels&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;annotations&lt;/span&gt;:                                                        &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+      &lt;span class=&quot;key&quot;&gt;service.alpha.openshift.io/serving-cert-secret-name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}-cert &lt;/span&gt;&lt;/span&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+  &lt;span class=&quot;key&quot;&gt;spec&lt;/span&gt;:
+    &lt;span class=&quot;key&quot;&gt;ports&lt;/span&gt;:
+    - &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;port: &amp;quot;${{CONTAINER_PORT}}&amp;quot;&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;protocol&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;TCP&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;targetPort&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span class=&quot;content&quot;&gt;${{CONTAINER_PORT}}&lt;/span&gt;&lt;span class=&quot;delimiter&quot;&gt;&amp;quot;&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;name&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;http&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;key&quot;&gt;selector&lt;/span&gt;:
+      &lt;span class=&quot;key&quot;&gt;app&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;
+      &lt;span class=&quot;key&quot;&gt;deploymentconfig&lt;/span&gt;: &lt;span class=&quot;string&quot;&gt;&lt;span class=&quot;content&quot;&gt;${NAME}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;colist arabic&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;1&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;The necessary annotation to let OpenShift generate a certificate for us.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Once we apply this configuration we can check if the secret has been generated for us:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;CodeRay highlight nowrap&quot;&gt;&lt;code data-lang=&quot;bash&quot;&gt;oc get secrets
+
+NAME                       TYPE                                  DATA      AGE
+builder-dockercfg-vdw69    kubernetes.io/dockercfg               1         1h
+builder-token-303tx        kubernetes.io/service-account-token   4         1h
+builder-token-l1npj        kubernetes.io/service-account-token   4         1h
+default-dockercfg-2mndj    kubernetes.io/dockercfg               1         1h
+default-token-bxvrc        kubernetes.io/service-account-token   4         1h
+default-token-t0c70        kubernetes.io/service-account-token   4         1h
+deployer-dockercfg-7dbgn   kubernetes.io/dockercfg               1         1h
+deployer-token-1r1fk       kubernetes.io/service-account-token   4         1h
+deployer-token-k4qq7       kubernetes.io/service-account-token   4         1h
+jenkins-cert               kubernetes.io/tls                     2         16m &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;colist arabic&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;1&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;generated tls secret&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Now let&amp;#8217;s use this certificate to secure nginx:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;generic-template-with-internal-encryption.yml&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;apiVersion: v1
+kind: Template
+metadata:
+  name: generic-template
+  annotations:
+    description: &quot;A generic template which creates a DeploymentConfig, Service and Route for a given docker image&quot;
+    tags: &quot;webserver&quot;
+objects:
+- kind: ConfigMap
+  apiVersion: v1
+  metadata:
+    name: ${NAME}-nginx-config
+  data:
+    grafana-nginx.conf: |
+      server {
+        listen 8443 ssl;                               &lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;(4)&lt;/b&gt;
+        ssl_certificate /etc/nginx/certs/tls.crt;      &lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;(4)&lt;/b&gt;
+        ssl_certificate_key /etc/nginx/certs/tls.key;  &lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;(4)&lt;/b&gt;
+        index index.html index.htm;
+
+        location / {
+         proxy_pass http://localhost:8080/;
+        }
+      }
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    replicas: 1
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+          deploymentconfig: ${NAME}
+      spec:
+        containers:
+        - image: ${DOCKER_IMAGE}
+          imagePullPolicy: Always
+          name: application
+          ports:
+          - containerPort: &quot;${{CONTAINER_PORT}}&quot;
+            protocol: TCP
+          terminationMessagePath: /dev/termination-log
+        - image: twalter/openshift-nginx:stable-alpine
+          imagePullPolicy: Always
+          name: nginx
+          ports:
+          - containerPort: 8443 &lt;i class=&quot;conum&quot; data-value=&quot;5&quot;&gt;&lt;/i&gt;&lt;b&gt;(5)&lt;/b&gt;
+            protocol: TCP
+          volumeMounts:
+          - mountPath: /etc/nginx/conf.d/
+            name: nginx-config-volume
+          - mountPath: /etc/nginx/certs  &lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;(3)&lt;/b&gt;
+            name: nginx-cert-volume      &lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;(3)&lt;/b&gt;
+        initContainers:
+        - name: init-mydb
+          image: busybox
+          command: ['sh', '-c', 'until nslookup mydb; do echo waiting for mydb; sleep 2; done;']
+        volumes:
+        - configMap:
+            defaultMode: 420
+            name: ${NAME}-nginx-config
+          name: nginx-config-volume
+        - secret:                    &lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;(2)&lt;/b&gt;
+            secretName: ${NAME}-cert &lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;(2)&lt;/b&gt;
+          name: nginx-cert-volume    &lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;(2)&lt;/b&gt;
+    triggers: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+    annotations:
+      service.alpha.openshift.io/serving-cert-secret-name: ${NAME}-cert  &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+  spec:
+    ports:
+    - port: 8443 &lt;i class=&quot;conum&quot; data-value=&quot;5&quot;&gt;&lt;/i&gt;&lt;b&gt;(5)&lt;/b&gt;
+      protocol: TCP
+      targetPort: 8443 &lt;i class=&quot;conum&quot; data-value=&quot;5&quot;&gt;&lt;/i&gt;&lt;b&gt;(5)&lt;/b&gt;
+      name: http
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+- apiVersion: v1
+  kind: Route
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    port:
+      targetPort: 8443 &lt;i class=&quot;conum&quot; data-value=&quot;5&quot;&gt;&lt;/i&gt;&lt;b&gt;(5)&lt;/b&gt;
+    to:
+      kind: Service
+      name: ${NAME}
+    tls:
+      termination: reencrypt  &lt;i class=&quot;conum&quot; data-value=&quot;6&quot;&gt;&lt;/i&gt;&lt;b&gt;(6)&lt;/b&gt;
+      insecureEdgeTerminationPolicy: Redirect &lt;i class=&quot;conum&quot; data-value=&quot;8&quot;&gt;&lt;/i&gt;&lt;b&gt;(8)&lt;/b&gt;
+      destinationCACertificate: |-            &lt;i class=&quot;conum&quot; data-value=&quot;7&quot;&gt;&lt;/i&gt;&lt;b&gt;(7)&lt;/b&gt;
+        -----BEGIN CERTIFICATE-----
+        MIIC6jCCAdKgAwIBAgIBATANBgkqhkiG9w0BAQsFADAmMSQwIgYDVQQDDBtvcGVu
+        c2hpZnQtc2lnbmVyQDE1MDE1OTkwMjIwHhcNMTcwODAxMTQ1MDIxWhcNMjIwNzMx
+        MTQ1MDIyWjAmMSQwIgYDVQQDDBtvcGVuc2hpZnQtc2lnbmVyQDE1MDE1OTkwMjIw
+        ggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC82yK5Tbda+qrQy3NTuJPK
+        UchalxsHafqNGz1b0iWFhD+kUovTPBZw67qfIbH7Rl+sVYECUXmWrkI3ctbr5ZXd
+        en2WDl5SsAjNodRiYHbxXGOEUUGhwykpWaD0+SxuA9ZNrMEGzxJlueSfhC1zWKE6
+        HR+q5lfxlFyY0/+BX2AgmvQDWS9fElwgnbLc+pQSfHAWFQ+ic7pPemxh468WjTIY
+        N2mT4lHLgjYRNf7GpC5TrNaA5FrUZ8hIevjtrlKDaSJian6rjJOinuACI2iQmHDm
+        e91LJLVvZmhiehwMGyAuDqaCvPBHF8TwNxFzj5TUzCY3c9Kr8HeClHxUhTYRsD+h
+        AgMBAAGjIzAhMA4GA1UdDwEB/wQEAwICpDAPBgNVHRMBAf8EBTADAQH/MA0GCSqG
+        SIb3DQEBCwUAA4IBAQAF6uaque2iQ7RD4sqoziIIKVaHgc4YFfOfRkt9ZQ4Fhd6R
+        VJKduVcqeBYPuzgXkPn/qZRDEVOTxwu7luqBg/+nbShKZ1fIT4/gKaSzQVFW/wPP
+        vWfTHrWTPbeYNBq2/00BkpGRT2M9T/KOKOVwmfN7x7uPdsmuThRlKpnb3we3riql
+        PogX0pjvyggLv0gREKWKiRSFg9ngZfLuQR0nxvbRxRoPVaefQwTr9GTIU69SWxWX
+        fyuoKFEGWbVN+DGCfPLRXMfvpxLjJiYoMK9VdL1rPX+C5evlDnA+U8MQhek+PgH5
+        BNGyLtH/x68Y+wQ4k4m8A/+/Lp43r8n5e1Kb5R/w
+        -----END CERTIFICATE-----
+
+        -----BEGIN CERTIFICATE-----
+        MIIDCjCCAfKgAwIBAgIBATANBgkqhkiG9w0BAQsFADA2MTQwMgYDVQQDDCtvcGVu
+        c2hpZnQtc2VydmljZS1zZXJ2aW5nLXNpZ25lckAxNTAxNTk5MDIyMB4XDTE3MDgw
+        MTE0NTAyMloXDTIyMDczMTE0NTAyM1owNjE0MDIGA1UEAwwrb3BlbnNoaWZ0LXNl
+        cnZpY2Utc2VydmluZy1zaWduZXJAMTUwMTU5OTAyMjCCASIwDQYJKoZIhvcNAQEB
+        BQADggEPADCCAQoCggEBAKxHhXqzbxfzHCT0gDQEVbnJvMVs+KVvYK9sP20sGhua
+        9rJR9S8CaRhFWsqC7R0FxMfJgWKeLU2IXC7cPKNjYVpC5Yp8jkSXsd9fRXOuky5F
+        WW+FYUBWSZwgSdASk33pqUYllcNUbpVJWCPYVJOX1Gh4Pra8GrycgbcNOYm40mYb
+        +nJFzjON9ISBIdinclS545aK9FVbJesy4Gia8zOItiKakZLFLP9shQjTDS5mliWe
+        pl0wBaB7h/Cg7aI3/SVlsABE1dJyxpd3fE0NhLdB70/+SNEIoDIc7o5gQsJHvF+e
+        yXxNeNoVXQAaXE+bBKq2lJkA4ivZi3Vmf1BDSba7as0CAwEAAaMjMCEwDgYDVR0P
+        AQH/BAQDAgKkMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAHGi
+        CfxsWysSLhHfIC2crIO5WoarBa3BrZapQhECe4pcI7mqISFPLVO5rpXx2iBw+QrK
+        vjWeAd/8G9HueA7GcGkgolmcHHAJwJ/Xj9Kkt8exKxnfDoRwYHKBDaUA9w8HyFHx
+        EMOlbNfaO2o2p1FcfZ1SCxoKcNhMt1mpOZVT9sGZV5o/x3o247GqZdIDrpLpz8xq
+        Lv7/3WlLwOhkGfLPY8Vi+gZ24oeZijtReVM7WZ/SpQ2O/Xo+cfkUYnDxyibJ6NEl
+        eIzIGQw80rLK72pYYwbcOFd1xOYQx2hsDAEY2wRP6QvLAtUHf+DrZj0xkHZmkolp
+        QGPHERXkiLqNBtyY/Rk=
+        -----END CERTIFICATE-----
+parameters:
+- name: NAME
+  description: The name for the deployment config, service and route
+  required: true
+- name: DOCKER_IMAGE
+  description:
+  required: true
+- name: CONTAINER_PORT
+  description: The port which will be exposed as service and route
+  value: &quot;8080&quot;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;colist arabic&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;1&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;add annotation to the route to let OpenShift generate the certificate secret for us&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;2&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;configure secret as volume&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;3&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;mount the secret to our nginx container&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;4&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;update nginx configuration to listen on port 8443 using ssl with the provided certificates&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;5&quot;&gt;&lt;/i&gt;&lt;b&gt;5&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;use port 8443 instead of 8081 just to make clear that we are using encryption&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;6&quot;&gt;&lt;/i&gt;&lt;b&gt;6&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;tell openshift to re-encrypt incoming traffic to the router before forwarding it to the service&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;7&quot;&gt;&lt;/i&gt;&lt;b&gt;7&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;configure the certificate which should be used to validate the certificate used in nginx. You need to replace this
+ certificate with the one from your installation. You can retrieve it from any pod by checking the file &lt;code&gt;/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt&lt;/code&gt;.
+In OpenShift 3.6 it should no longer be necessary to configure this when using service serving certificates.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;8&quot;&gt;&lt;/i&gt;&lt;b&gt;8&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;redirect insecure traffic to a secure schema (http &amp;#8594; https)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;That&amp;#8217;s the complete template.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;CodeRay highlight nowrap&quot;&gt;&lt;code data-lang=&quot;bash&quot;&gt;oc process -f generic-template-with-internal-encryption.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
+oc rollout latest dc/jenkins&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;After applying it connection you can access your application and the traffic to and from the edge router is encrypted.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Possible improvements: The port of the application should be injected into the nginx configuration as well.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;</content><author><name></name></author></entry><entry><title type="html">How to run nginx on OpenShift?</title><link href="https://torstenwalter.github.io/openshift/nginx/2017/08/04/nginx-on-openshift.html" rel="alternate" type="text/html" title="How to run nginx on OpenShift?" /><published>2017-08-04T11:00:00+00:00</published><updated>2017-08-04T11:00:00+00:00</updated><id>https://torstenwalter.github.io/openshift/nginx/2017/08/04/nginx-on-openshift</id><content type="html" xml:base="https://torstenwalter.github.io/openshift/nginx/2017/08/04/nginx-on-openshift.html">&lt;div id=&quot;toc&quot; class=&quot;toc&quot;&gt;
 &lt;div id=&quot;toctitle&quot;&gt;Table of Contents&lt;/div&gt;
 &lt;ul class=&quot;sectlevel1&quot;&gt;
 &lt;li&gt;&lt;a href=&quot;#fix_file_and_directory_permissions&quot;&gt;Fix file and directory permissions&lt;/a&gt;&lt;/li&gt;
