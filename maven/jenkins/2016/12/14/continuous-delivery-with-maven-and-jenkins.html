@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>Continuous Delivery with Maven and Jenkins</title>
-  <meta name="description" content="Motivation: Every jenkins build produces a potential release and as such each build should have a unique version number. This post shows how to use the Jenki...">
+  <meta name="description" content="How to automatically create unique version numbers with Maven in Jenkins.">
 
   <link rel="stylesheet" href="/assets/highlight.js/styles/default.css">
 
@@ -81,10 +81,10 @@
 
   <div class="post-content" itemprop="articleBody">
     <p>Motivation: Every jenkins build produces a potential release and as such each build should have a unique version number.
-This post shows how to use the Jenkins build number to achive this.</p>
+This post shows how to use the Jenkins build number to archive this.</p>
 
 <p>The basic idea is to use a variable as part of the &lt;version&gt;…&lt;/version&gt; declaration in your pom.xml. This variable
-is set to 1.0-SNAPSHOT by default for local builds and when ececuted on jenkins to ‘1.0-&lt;BUILD_NUMBER&gt;’.</p>
+is set to 1.0-SNAPSHOT by default for local builds and when executed on jenkins to ‘1.0-&lt;BUILD_NUMBER&gt;’.</p>
 
 <figure class="highlight"><pre><code class="language-xml" data-lang="xml"><span class="nt">&lt;project</span> <span class="na">xmlns=</span><span class="s">"http://maven.apache.org/POM/4.0.0"</span> <span class="na">xmlns:xsi=</span><span class="s">"http://www.w3.org/2001/XMLSchema-instance"</span>
          <span class="na">xsi:schemaLocation=</span><span class="s">"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd"</span><span class="nt">&gt;</span>
