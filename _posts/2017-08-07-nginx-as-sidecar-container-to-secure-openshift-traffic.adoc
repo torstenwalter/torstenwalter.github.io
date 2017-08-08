@@ -382,19 +382,18 @@ Once we apply this configuration we can check if the secret has been generated f
 
 [source,bash,options="nowrap"]
 ----
-oc get secrets
+oc get secrets -o name
 
-NAME                       TYPE                                  DATA      AGE
-builder-dockercfg-vdw69    kubernetes.io/dockercfg               1         1h
-builder-token-303tx        kubernetes.io/service-account-token   4         1h
-builder-token-l1npj        kubernetes.io/service-account-token   4         1h
-default-dockercfg-2mndj    kubernetes.io/dockercfg               1         1h
-default-token-bxvrc        kubernetes.io/service-account-token   4         1h
-default-token-t0c70        kubernetes.io/service-account-token   4         1h
-deployer-dockercfg-7dbgn   kubernetes.io/dockercfg               1         1h
-deployer-token-1r1fk       kubernetes.io/service-account-token   4         1h
-deployer-token-k4qq7       kubernetes.io/service-account-token   4         1h
-jenkins-cert               kubernetes.io/tls                     2         16m // <1>
+secret/builder-dockercfg-vdw69
+secret/builder-token-303tx
+secret/builder-token-l1npj
+secret/default-dockercfg-2mndj
+secret/default-token-bxvrc
+secret/default-token-t0c70
+secret/deployer-dockercfg-7dbgn
+secret/deployer-token-1r1fk
+secret/deployer-token-k4qq7
+secret/jenkins-cert // <1>
 ----
 
 <1> generated tls secret
