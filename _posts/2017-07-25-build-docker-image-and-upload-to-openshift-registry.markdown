@@ -3,6 +3,7 @@ layout: post
 title:  "How to build a docker image and upload it to Minishift's docker registry?"
 date:   2017-07-25 15:30:00 +0200
 categories: minishift openshift docker registry
+excerpt: Steps needed to push docker images to the Minishift docker registry.
 ---
 
 

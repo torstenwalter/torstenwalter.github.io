@@ -3,6 +3,7 @@ layout: post
 title:  "Installing Minishift on OS X"
 date:   2017-07-18 13:30:00 +0100
 categories: minishift openshift homebrew
+excerpt: Explains how to install Minishift as a local development alternative for OpenShift.
 ---
 
 If you want to play around with OpenShift locally then Minishift is a nice option.

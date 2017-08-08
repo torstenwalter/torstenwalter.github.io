@@ -3,6 +3,7 @@ layout: post
 title:  "How to install and configure fish shell on OSX"
 date:   2017-07-26 12:00:00 +0200
 categories: osx shell fish
+excerpt: Explains how to install fishshell on OSX and configure a powerline style prompt.
 ---
 
 [fish](https://fishshell.com/) is a very nice shell with autocompletion out of the box. I find it extremely useful.

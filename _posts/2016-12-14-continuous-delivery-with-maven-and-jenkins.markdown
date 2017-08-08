@@ -3,13 +3,14 @@ layout: post
 title:  "Continuous Delivery with Maven and Jenkins"
 date:   2016-12-14 13:30:00 +0100
 categories: maven jenkins
+excerpt: How to automatically create unique version numbers with Maven in Jenkins.
 ---
 
 Motivation: Every jenkins build produces a potential release and as such each build should have a unique version number.
-This post shows how to use the Jenkins build number to achive this.
+This post shows how to use the Jenkins build number to archive this.
 
 The basic idea is to use a variable as part of the &lt;version>...&lt;/version> declaration in your pom.xml. This variable
-is set to 1.0-SNAPSHOT by default for local builds and when ececuted on jenkins to '1.0-&lt;BUILD_NUMBER>'.
+is set to 1.0-SNAPSHOT by default for local builds and when executed on jenkins to '1.0-&lt;BUILD_NUMBER>'.
 
 {% highlight xml %}
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"

@@ -3,6 +3,7 @@ layout: post
 title:  "How to run nginx on OpenShift?"
 date:   2017-08-04 13:00:00 +0200
 categories: openshift nginx
+excerpt: Changes needed in official nginx docker image to be able to run it on OpenShift (or Minishift).
 ---
 :toc:
 
