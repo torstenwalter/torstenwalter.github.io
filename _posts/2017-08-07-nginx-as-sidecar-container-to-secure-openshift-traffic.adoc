@@ -19,7 +19,7 @@ your pod.
 Let's start with a simple deployment template: consisting og: A deployment config, one service and a route which is configured to do tls termination.
 
 generic-template.yml
-[source,yml,options="nowrap"]
+[source,yaml,options="nowrap"]
 ----
 apiVersion: v1
 kind: Template
@@ -128,7 +128,7 @@ no network traffic between the two goes over the wire.
 As first step let's add the nginx image and route traffice to nginx instead of our container.
 This way we can check if nginx is working.
 
-[source,yml,options="nowrap"]
+[source,yaml,options="nowrap"]
 ----
 apiVersion: v1
 kind: Template
@@ -226,7 +226,7 @@ We should see a "Welcome to nginx!" page.
 
 Now that nginx is running we can configure it to forward incoming requests to our application.
 
-[source,yml,options="nowrap"]
+[source,yaml,options="nowrap"]
 ----
 apiVersion: v1
 kind: Template
@@ -354,7 +354,7 @@ We should see a "Welcome to nginx!" page.
 Service serving certificate secrets
 First of all we need a certificate in order to do TLS. Luckily OpenShift has a feature called https://docs.openshift.com/online/dev_guide/secrets.html#service-serving-certificate-secrets[Service Serving Certificate Secrets]
 which allows to generate certificates. All we need to do is to add the annotation as shown below:
-[source,yml,options="nowrap"]
+[source,yaml,options="nowrap"]
 ----
 - apiVersion: v1
   kind: Service
@@ -402,6 +402,7 @@ jenkins-cert               kubernetes.io/tls                     2         16m /
 Now let's use this certificate to secure nginx:
 
 generic-template-with-internal-encryption.yml
+[source,yaml,options="nowrap"]
 ----
 apiVersion: v1
 kind: Template
