@@ -9,6 +9,8 @@
   <title>How to use nginx as a sidecar container to encrypt network traffic on OpenShift?</title>
   <meta name="description" content="">
 
+  <link rel="stylesheet" href="/assets/highlight.js/styles/default.css">
+
   <link rel="stylesheet" href="/assets/main.css">
   <link rel="canonical" href="https://torstenwalter.github.io/openshift/nginx/sidecar/tls/encryption/certificates/2017/08/07/nginx-as-sidecar-container-to-secure-openshift-traffic.html">
   <link rel="alternate" type="application/rss+xml" title="Torsten Walter" href="/feed.xml">
@@ -105,79 +107,79 @@ your pod.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight nowrap"><code data-lang="yml"><span class="key">apiVersion</span>: <span class="string"><span class="content">v1</span></span>
-<span class="key">kind</span>: <span class="string"><span class="content">Template</span></span>
-<span class="key">metadata</span>:
-  <span class="key">name</span>: <span class="string"><span class="content">generic-template</span></span>
-  <span class="key">annotations</span>:
-    <span class="key">description</span>: <span class="string"><span class="delimiter">&quot;</span><span class="content">A generic template which creates a DeploymentConfig, Service and Route for a given docker image</span><span class="delimiter">&quot;</span></span>
-    <span class="key">tags</span>: <span class="string"><span class="delimiter">&quot;</span><span class="content">webserver</span><span class="delimiter">&quot;</span></span>
-<span class="key">objects</span>:
-- <span class="string"><span class="content">apiVersion: v1</span></span>
-  <span class="key">kind</span>: <span class="string"><span class="content">DeploymentConfig </span></span><i class="conum" data-value="1"></i><b>(1)</b>
-  <span class="key">metadata</span>:
-    <span class="key">labels</span>:
-      <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-    <span class="key">name</span>: <span class="string"><span class="content">${NAME}</span></span>
-  <span class="key">spec</span>:
-    <span class="key">replicas</span>: <span class="string"><span class="content">1</span></span>
-    <span class="key">selector</span>:
-      <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-      <span class="key">deploymentconfig</span>: <span class="string"><span class="content">${NAME}</span></span>
-    <span class="key">template</span>:
-      <span class="key">metadata</span>:
-        <span class="key">labels</span>:
-          <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-          <span class="key">deploymentconfig</span>: <span class="string"><span class="content">${NAME}</span></span>
-      <span class="key">spec</span>:
-        <span class="key">containers</span>:
-        - <span class="string"><span class="content">image: ${DOCKER_IMAGE}</span></span>
-          <span class="key">imagePullPolicy</span>: <span class="string"><span class="content">Always</span></span>
-          <span class="key">name</span>: <span class="string"><span class="content">application</span></span>
-          <span class="key">ports</span>:
-          - <span class="string"><span class="content">containerPort: &quot;${{CONTAINER_PORT}}&quot;</span></span>
-            <span class="key">protocol</span>: <span class="string"><span class="content">TCP</span></span>
-          <span class="key">terminationMessagePath</span>: <span class="string"><span class="content">/dev/termination-log</span></span>
-    <span class="key">triggers</span>: <span class="string"><span class="content">{}</span></span>
-- <span class="string"><span class="content">apiVersion: v1</span></span>
-  <span class="key">kind</span>: <span class="string"><span class="content">Service </span></span><i class="conum" data-value="2"></i><b>(2)</b>
-  <span class="key">metadata</span>:
-    <span class="key">labels</span>:
-      <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-    <span class="key">name</span>: <span class="string"><span class="content">${NAME}</span></span>
-  <span class="key">spec</span>:
-    <span class="key">ports</span>:
-    - <span class="string"><span class="content">port: &quot;${{CONTAINER_PORT}}&quot;</span></span>
-      <span class="key">protocol</span>: <span class="string"><span class="content">TCP</span></span>
-      <span class="key">targetPort</span>: <span class="string"><span class="delimiter">&quot;</span><span class="content">${{CONTAINER_PORT}}</span><span class="delimiter">&quot;</span></span>
-      <span class="key">name</span>: <span class="string"><span class="content">http</span></span>
-    <span class="key">selector</span>:
-      <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-      <span class="key">deploymentconfig</span>: <span class="string"><span class="content">${NAME}</span></span>
-- <span class="string"><span class="content">apiVersion: v1</span></span>
-  <span class="key">kind</span>: <span class="string"><span class="content">Route </span></span><i class="conum" data-value="3"></i><b>(3)</b>
-  <span class="key">metadata</span>:
-    <span class="key">labels</span>:
-      <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-    <span class="key">name</span>: <span class="string"><span class="content">${NAME}</span></span>
-  <span class="key">spec</span>:
-    <span class="key">port</span>:
-      <span class="key">targetPort</span>: <span class="string"><span class="delimiter">&quot;</span><span class="content">${{CONTAINER_PORT}}</span><span class="delimiter">&quot;</span></span>
-    <span class="key">to</span>:
-      <span class="key">kind</span>: <span class="string"><span class="content">Service</span></span>
-      <span class="key">name</span>: <span class="string"><span class="content">${NAME}</span></span>
-    <span class="key">tls</span>:
-      <span class="key">termination</span>: <span class="string"><span class="content">edge</span></span>
-<span class="key">parameters</span>:
-- <span class="string"><span class="content">name: NAME</span></span>
-  <span class="key">description</span>: <span class="string"><span class="content">The name for the deployment config, service and route</span></span>
-  <span class="key">required</span>: <span class="string"><span class="content">true</span></span>
-- <span class="string"><span class="content">name: DOCKER_IMAGE</span></span>
-  <span class="key">description</span>:
-  <span class="key">required</span>: <span class="string"><span class="content">true</span></span>
-- <span class="string"><span class="content">name: CONTAINER_PORT</span></span>
-  <span class="key">description</span>: <span class="string"><span class="content">The port which will be exposed as service and route</span></span>
-  <span class="key">value</span>: <span class="string"><span class="delimiter">&quot;</span><span class="content">8080</span><span class="delimiter">&quot;</span></span></code></pre>
+<pre class="highlightjs highlight nowrap"><code class="language-yaml hljs" data-lang="yaml">apiVersion: v1
+kind: Template
+metadata:
+  name: generic-template
+  annotations:
+    description: "A generic template which creates a DeploymentConfig, Service and Route for a given docker image"
+    tags: "webserver"
+objects:
+- apiVersion: v1
+  kind: DeploymentConfig <i class="conum" data-value="1"></i><b>(1)</b>
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    replicas: 1
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+          deploymentconfig: ${NAME}
+      spec:
+        containers:
+        - image: ${DOCKER_IMAGE}
+          imagePullPolicy: Always
+          name: application
+          ports:
+          - containerPort: "${{CONTAINER_PORT}}"
+            protocol: TCP
+          terminationMessagePath: /dev/termination-log
+    triggers: {}
+- apiVersion: v1
+  kind: Service <i class="conum" data-value="2"></i><b>(2)</b>
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    ports:
+    - port: "${{CONTAINER_PORT}}"
+      protocol: TCP
+      targetPort: "${{CONTAINER_PORT}}"
+      name: http
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+- apiVersion: v1
+  kind: Route <i class="conum" data-value="3"></i><b>(3)</b>
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    port:
+      targetPort: "${{CONTAINER_PORT}}"
+    to:
+      kind: Service
+      name: ${NAME}
+    tls:
+      termination: edge
+parameters:
+- name: NAME
+  description: The name for the deployment config, service and route
+  required: true
+- name: DOCKER_IMAGE
+  description:
+  required: true
+- name: CONTAINER_PORT
+  description: The port which will be exposed as service and route
+  value: "8080"</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -205,7 +207,7 @@ The example below uses it to instantiate a jenkins instance:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight nowrap"><code data-lang="bash">oc process -f generic-template.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
+<pre class="highlightjs highlight nowrap"><code class="language-bash hljs" data-lang="bash">oc process -f generic-template.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
 oc rollout latest dc/jenkins</code></pre>
 </div>
 </div>
@@ -231,85 +233,85 @@ This way we can check if nginx is working.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight nowrap"><code data-lang="yml"><span class="key">apiVersion</span>: <span class="string"><span class="content">v1</span></span>
-<span class="key">kind</span>: <span class="string"><span class="content">Template</span></span>
-<span class="key">metadata</span>:
-  <span class="key">name</span>: <span class="string"><span class="content">generic-template</span></span>
-  <span class="key">annotations</span>:
-    <span class="key">description</span>: <span class="string"><span class="delimiter">&quot;</span><span class="content">A generic template which creates a DeploymentConfig, Service and Route for a given docker image</span><span class="delimiter">&quot;</span></span>
-    <span class="key">tags</span>: <span class="string"><span class="delimiter">&quot;</span><span class="content">webserver</span><span class="delimiter">&quot;</span></span>
-<span class="key">objects</span>:
-- <span class="string"><span class="content">apiVersion: v1</span></span>
-  <span class="key">kind</span>: <span class="string"><span class="content">DeploymentConfig</span></span>
-  <span class="key">metadata</span>:
-    <span class="key">labels</span>:
-      <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-    <span class="key">name</span>: <span class="string"><span class="content">${NAME}</span></span>
-  <span class="key">spec</span>:
-    <span class="key">replicas</span>: <span class="string"><span class="content">1</span></span>
-    <span class="key">selector</span>:
-      <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-      <span class="key">deploymentconfig</span>: <span class="string"><span class="content">${NAME}</span></span>
-    <span class="key">template</span>:
-      <span class="key">metadata</span>:
-        <span class="key">labels</span>:
-          <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-          <span class="key">deploymentconfig</span>: <span class="string"><span class="content">${NAME}</span></span>
-      <span class="key">spec</span>:
-        <span class="key">containers</span>:
-        - <span class="string"><span class="content">image: ${DOCKER_IMAGE}</span></span>
-          <span class="key">imagePullPolicy</span>: <span class="string"><span class="content">Always</span></span>
-          <span class="key">name</span>: <span class="string"><span class="content">application</span></span>
-          <span class="key">ports</span>:
-          - <span class="string"><span class="content">containerPort: &quot;${{CONTAINER_PORT}}&quot;</span></span>
-            <span class="key">protocol</span>: <span class="string"><span class="content">TCP</span></span>
-          <span class="key">terminationMessagePath</span>: <span class="string"><span class="content">/dev/termination-log</span></span>
-        - <span class="string"><span class="content">image: twalter/openshift-nginx:stable-alpine </span></span><i class="conum" data-value="1"></i><b>(1)</b>
-          <span class="key">imagePullPolicy</span>: <span class="string"><span class="content">Always                      </span></span><i class="conum" data-value="1"></i><b>(1)</b>
-          <span class="key">name</span>: <span class="string"><span class="content">nginx                                  </span></span><i class="conum" data-value="1"></i><b>(1)</b>
-          <span class="key">ports</span>:                                       <i class="conum" data-value="1"></i><b>(1)</b>
-          - <span class="string"><span class="content">containerPort: 8081                        </span></span><i class="conum" data-value="1"></i><b>(1)</b>
-            <span class="key">protocol</span>: <span class="string"><span class="content">TCP                              </span></span><i class="conum" data-value="1"></i><b>(1)</b>
-    <span class="key">triggers</span>: <span class="string"><span class="content">{}</span></span>
-- <span class="string"><span class="content">apiVersion: v1</span></span>
-  <span class="key">kind</span>: <span class="string"><span class="content">Service</span></span>
-  <span class="key">metadata</span>:
-    <span class="key">labels</span>:
-      <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-    <span class="key">name</span>: <span class="string"><span class="content">${NAME}</span></span>
-  <span class="key">spec</span>:
-    <span class="key">ports</span>:
-    - <span class="string"><span class="content">port: 8081       </span></span><i class="conum" data-value="2"></i><b>(2)</b>
-      <span class="key">protocol</span>: <span class="string"><span class="content">TCP</span></span>
-      <span class="key">targetPort</span>: <span class="string"><span class="content">8081 </span></span><i class="conum" data-value="2"></i><b>(2)</b>
-      <span class="key">name</span>: <span class="string"><span class="content">http</span></span>
-    <span class="key">selector</span>:
-      <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-      <span class="key">deploymentconfig</span>: <span class="string"><span class="content">${NAME}</span></span>
-- <span class="string"><span class="content">apiVersion: v1</span></span>
-  <span class="key">kind</span>: <span class="string"><span class="content">Route</span></span>
-  <span class="key">metadata</span>:
-    <span class="key">labels</span>:
-      <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-    <span class="key">name</span>: <span class="string"><span class="content">${NAME}</span></span>
-  <span class="key">spec</span>:
-    <span class="key">port</span>:
-      <span class="key">targetPort</span>: <span class="string"><span class="content">8081 </span></span><i class="conum" data-value="2"></i><b>(2)</b>
-    <span class="key">to</span>:
-      <span class="key">kind</span>: <span class="string"><span class="content">Service</span></span>
-      <span class="key">name</span>: <span class="string"><span class="content">${NAME}</span></span>
-    <span class="key">tls</span>:
-      <span class="key">termination</span>: <span class="string"><span class="content">edge</span></span>
-<span class="key">parameters</span>:
-- <span class="string"><span class="content">name: NAME</span></span>
-  <span class="key">description</span>: <span class="string"><span class="content">The name for the deployment config, service and route</span></span>
-  <span class="key">required</span>: <span class="string"><span class="content">true</span></span>
-- <span class="string"><span class="content">name: DOCKER_IMAGE</span></span>
-  <span class="key">description</span>:
-  <span class="key">required</span>: <span class="string"><span class="content">true</span></span>
-- <span class="string"><span class="content">name: CONTAINER_PORT</span></span>
-  <span class="key">description</span>: <span class="string"><span class="content">The port which will be exposed as service and route</span></span>
-  <span class="key">value</span>: <span class="string"><span class="delimiter">&quot;</span><span class="content">8080</span><span class="delimiter">&quot;</span></span></code></pre>
+<pre class="highlightjs highlight nowrap"><code class="language-yaml hljs" data-lang="yaml">apiVersion: v1
+kind: Template
+metadata:
+  name: generic-template
+  annotations:
+    description: "A generic template which creates a DeploymentConfig, Service and Route for a given docker image"
+    tags: "webserver"
+objects:
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    replicas: 1
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+          deploymentconfig: ${NAME}
+      spec:
+        containers:
+        - image: ${DOCKER_IMAGE}
+          imagePullPolicy: Always
+          name: application
+          ports:
+          - containerPort: "${{CONTAINER_PORT}}"
+            protocol: TCP
+          terminationMessagePath: /dev/termination-log
+        - image: twalter/openshift-nginx:stable-alpine <i class="conum" data-value="1"></i><b>(1)</b>
+          imagePullPolicy: Always                      <i class="conum" data-value="1"></i><b>(1)</b>
+          name: nginx                                  <i class="conum" data-value="1"></i><b>(1)</b>
+          ports:                                       <i class="conum" data-value="1"></i><b>(1)</b>
+          - containerPort: 8081                        <i class="conum" data-value="1"></i><b>(1)</b>
+            protocol: TCP                              <i class="conum" data-value="1"></i><b>(1)</b>
+    triggers: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    ports:
+    - port: 8081       <i class="conum" data-value="2"></i><b>(2)</b>
+      protocol: TCP
+      targetPort: 8081 <i class="conum" data-value="2"></i><b>(2)</b>
+      name: http
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+- apiVersion: v1
+  kind: Route
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    port:
+      targetPort: 8081 <i class="conum" data-value="2"></i><b>(2)</b>
+    to:
+      kind: Service
+      name: ${NAME}
+    tls:
+      termination: edge
+parameters:
+- name: NAME
+  description: The name for the deployment config, service and route
+  required: true
+- name: DOCKER_IMAGE
+  description:
+  required: true
+- name: CONTAINER_PORT
+  description: The port which will be exposed as service and route
+  value: "8080"</code></pre>
 </div>
 </div>
 <div class="colist arabic">
@@ -329,7 +331,7 @@ This way we can check if nginx is working.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight nowrap"><code data-lang="bash">oc process -f generic-template.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
+<pre class="highlightjs highlight nowrap"><code class="language-bash hljs" data-lang="bash">oc process -f generic-template.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
 oc rollout latest dc/jenkins</code></pre>
 </div>
 </div>
@@ -344,111 +346,111 @@ oc rollout latest dc/jenkins</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight nowrap"><code data-lang="yml"><span class="key">apiVersion</span>: <span class="string"><span class="content">v1</span></span>
-<span class="key">kind</span>: <span class="string"><span class="content">Template</span></span>
-<span class="key">metadata</span>:
-  <span class="key">name</span>: <span class="string"><span class="content">generic-template</span></span>
-  <span class="key">annotations</span>:
-    <span class="key">description</span>: <span class="string"><span class="delimiter">&quot;</span><span class="content">A generic template which creates a DeploymentConfig, Service and Route for a given docker image</span><span class="delimiter">&quot;</span></span>
-    <span class="key">tags</span>: <span class="string"><span class="delimiter">&quot;</span><span class="content">webserver</span><span class="delimiter">&quot;</span></span>
-<span class="key">objects</span>:
-- <span class="string"><span class="content">kind: ConfigMap                           </span></span><i class="conum" data-value="1"></i><b>(1)</b>
-  <span class="key">apiVersion</span>: <span class="string"><span class="content">v1                            </span></span><i class="conum" data-value="1"></i><b>(1)</b>
-  <span class="key">metadata</span>:                                 <i class="conum" data-value="1"></i><b>(1)</b>
-    <span class="key">name</span>: <span class="string"><span class="content">${NAME}-nginx-config              </span></span><i class="conum" data-value="1"></i><b>(1)</b>
-  <span class="key">data</span>:                                     <i class="conum" data-value="1"></i><b>(1)</b>
-    <span class="key">grafana-nginx.conf</span>: <span class="string"><span class="delimiter">|</span></span>                   <i class="conum" data-value="1"></i><b>(1)</b>
-      <span class="error">server {                              </span><i class="conum" data-value="1"></i><b>(1)</b>
-        <span class="error">listen 8081;                         </span><i class="conum" data-value="1"></i><b>(1)</b> <i class="conum" data-value="2"></i><b>(2)</b>
-        <span class="error">index index.html index.htm;         </span><i class="conum" data-value="1"></i><b>(1)</b>
+<pre class="highlightjs highlight nowrap"><code class="language-yaml hljs" data-lang="yaml">apiVersion: v1
+kind: Template
+metadata:
+  name: generic-template
+  annotations:
+    description: "A generic template which creates a DeploymentConfig, Service and Route for a given docker image"
+    tags: "webserver"
+objects:
+- kind: ConfigMap                           <i class="conum" data-value="1"></i><b>(1)</b>
+  apiVersion: v1                            <i class="conum" data-value="1"></i><b>(1)</b>
+  metadata:                                 <i class="conum" data-value="1"></i><b>(1)</b>
+    name: ${NAME}-nginx-config              <i class="conum" data-value="1"></i><b>(1)</b>
+  data:                                     <i class="conum" data-value="1"></i><b>(1)</b>
+    grafana-nginx.conf: |                   <i class="conum" data-value="1"></i><b>(1)</b>
+      server {                              <i class="conum" data-value="1"></i><b>(1)</b>
+        listen 8081;                        <i class="conum" data-value="1"></i><b>(1)</b> <i class="conum" data-value="2"></i><b>(2)</b>
+        index index.html index.htm;         <i class="conum" data-value="1"></i><b>(1)</b>
 
-        <span class="error">location / {                        </span><i class="conum" data-value="1"></i><b>(1)</b>
-         <span class="error">proxy_pass http://localhost:8080/; </span><i class="conum" data-value="1"></i><b>(1)</b>
+        location / {                        <i class="conum" data-value="1"></i><b>(1)</b>
+         proxy_pass http://localhost:8080/; <i class="conum" data-value="1"></i><b>(1)</b>
         }                                   <i class="conum" data-value="1"></i><b>(1)</b>
       }                                     <i class="conum" data-value="1"></i><b>(1)</b>
-- <span class="string"><span class="content">apiVersion: v1</span></span>
-  <span class="key">kind</span>: <span class="string"><span class="content">DeploymentConfig</span></span>
-  <span class="key">metadata</span>:
-    <span class="key">labels</span>:
-      <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-    <span class="key">name</span>: <span class="string"><span class="content">${NAME}</span></span>
-  <span class="key">spec</span>:
-    <span class="key">replicas</span>: <span class="string"><span class="content">1</span></span>
-    <span class="key">selector</span>:
-      <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-      <span class="key">deploymentconfig</span>: <span class="string"><span class="content">${NAME}</span></span>
-    <span class="key">template</span>:
-      <span class="key">metadata</span>:
-        <span class="key">labels</span>:
-          <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-          <span class="key">deploymentconfig</span>: <span class="string"><span class="content">${NAME}</span></span>
-      <span class="key">spec</span>:
-        <span class="key">containers</span>:
-        - <span class="string"><span class="content">image: ${DOCKER_IMAGE}</span></span>
-          <span class="key">imagePullPolicy</span>: <span class="string"><span class="content">Always</span></span>
-          <span class="key">name</span>: <span class="string"><span class="content">application</span></span>
-          <span class="key">ports</span>:
-          - <span class="string"><span class="content">containerPort: &quot;${{CONTAINER_PORT}}&quot;</span></span>
-            <span class="key">protocol</span>: <span class="string"><span class="content">TCP</span></span>
-          <span class="key">terminationMessagePath</span>: <span class="string"><span class="content">/dev/termination-log</span></span>
-        - <span class="string"><span class="content">image: twalter/openshift-nginx:stable-alpine</span></span>
-          <span class="key">imagePullPolicy</span>: <span class="string"><span class="content">Always</span></span>
-          <span class="key">name</span>: <span class="string"><span class="content">nginx</span></span>
-          <span class="key">ports</span>:
-          - <span class="string"><span class="content">containerPort: 8081</span></span>
-            <span class="key">protocol</span>: <span class="string"><span class="content">TCP</span></span>
-          <span class="key">volumeMounts</span>:                       <i class="conum" data-value="4"></i><b>(4)</b>
-          - <span class="string"><span class="content">mountPath: /etc/nginx/conf.d/     </span></span><i class="conum" data-value="4"></i><b>(4)</b>
-            <span class="key">name</span>: <span class="string"><span class="content">nginx-config-volume </span></span><i class="conum" data-value="4"></i><b>(4)</b>
-        <span class="key">initContainers</span>:
-        - <span class="string"><span class="content">name: init-mydb</span></span>
-          <span class="key">image</span>: <span class="string"><span class="content">busybox</span></span>
-          <span class="key">command</span>: <span class="string"><span class="content">['sh', '-c', 'until nslookup mydb; do echo waiting for mydb; sleep 2; done;']</span></span>
-        <span class="key">volumes</span>:                             <i class="conum" data-value="3"></i><b>(3)</b>
-        - <span class="string"><span class="content">configMap:                         </span><span class="content"><i class="conum" data-value="3"></i><b>(3)</b>
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    replicas: 1
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+          deploymentconfig: ${NAME}
+      spec:
+        containers:
+        - image: ${DOCKER_IMAGE}
+          imagePullPolicy: Always
+          name: application
+          ports:
+          - containerPort: "${{CONTAINER_PORT}}"
+            protocol: TCP
+          terminationMessagePath: /dev/termination-log
+        - image: twalter/openshift-nginx:stable-alpine
+          imagePullPolicy: Always
+          name: nginx
+          ports:
+          - containerPort: 8081
+            protocol: TCP
+          volumeMounts:                       <i class="conum" data-value="4"></i><b>(4)</b>
+          - mountPath: /etc/nginx/conf.d/     <i class="conum" data-value="4"></i><b>(4)</b>
+            name: nginx-config-volume <i class="conum" data-value="4"></i><b>(4)</b>
+        initContainers:
+        - name: init-mydb
+          image: busybox
+          command: ['sh', '-c', 'until nslookup mydb; do echo waiting for mydb; sleep 2; done;']
+        volumes:                             <i class="conum" data-value="3"></i><b>(3)</b>
+        - configMap:                         <i class="conum" data-value="3"></i><b>(3)</b>
             defaultMode: 420                 <i class="conum" data-value="3"></i><b>(3)</b>
-            name: ${NAME}-nginx-config       </span></span><i class="conum" data-value="3"></i><b>(3)</b>
-          <span class="key">name</span>: <span class="string"><span class="content">nginx-config-volume  </span></span><i class="conum" data-value="3"></i><b>(3)</b>
-    <span class="key">triggers</span>: <span class="string"><span class="content">{}</span></span>
-- <span class="string"><span class="content">apiVersion: v1</span></span>
-  <span class="key">kind</span>: <span class="string"><span class="content">Service</span></span>
-  <span class="key">metadata</span>:
-    <span class="key">labels</span>:
-      <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-    <span class="key">name</span>: <span class="string"><span class="content">${NAME}</span></span>
-  <span class="key">spec</span>:
-    <span class="key">ports</span>:
-    - <span class="string"><span class="content">port: 8081</span></span>
-      <span class="key">protocol</span>: <span class="string"><span class="content">TCP</span></span>
-      <span class="key">targetPort</span>: <span class="string"><span class="content">8081</span></span>
-      <span class="key">name</span>: <span class="string"><span class="content">http</span></span>
-    <span class="key">selector</span>:
-      <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-      <span class="key">deploymentconfig</span>: <span class="string"><span class="content">${NAME}</span></span>
-- <span class="string"><span class="content">apiVersion: v1</span></span>
-  <span class="key">kind</span>: <span class="string"><span class="content">Route</span></span>
-  <span class="key">metadata</span>:
-    <span class="key">labels</span>:
-      <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-    <span class="key">name</span>: <span class="string"><span class="content">${NAME}</span></span>
-  <span class="key">spec</span>:
-    <span class="key">port</span>:
-      <span class="key">targetPort</span>: <span class="string"><span class="content">8081</span></span>
-    <span class="key">to</span>:
-      <span class="key">kind</span>: <span class="string"><span class="content">Service</span></span>
-      <span class="key">name</span>: <span class="string"><span class="content">${NAME}</span></span>
-    <span class="key">tls</span>:
-      <span class="key">termination</span>: <span class="string"><span class="content">edge</span></span>
-<span class="key">parameters</span>:
-- <span class="string"><span class="content">name: NAME</span></span>
-  <span class="key">description</span>: <span class="string"><span class="content">The name for the deployment config, service and route</span></span>
-  <span class="key">required</span>: <span class="string"><span class="content">true</span></span>
-- <span class="string"><span class="content">name: DOCKER_IMAGE</span></span>
-  <span class="key">description</span>:
-  <span class="key">required</span>: <span class="string"><span class="content">true</span></span>
-- <span class="string"><span class="content">name: CONTAINER_PORT</span></span>
-  <span class="key">description</span>: <span class="string"><span class="content">The port which will be exposed as service and route</span></span>
-  <span class="key">value</span>: <span class="string"><span class="delimiter">&quot;</span><span class="content">8080</span><span class="delimiter">&quot;</span></span></code></pre>
+            name: ${NAME}-nginx-config       <i class="conum" data-value="3"></i><b>(3)</b>
+          name: nginx-config-volume  <i class="conum" data-value="3"></i><b>(3)</b>
+    triggers: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    ports:
+    - port: 8081
+      protocol: TCP
+      targetPort: 8081
+      name: http
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+- apiVersion: v1
+  kind: Route
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    port:
+      targetPort: 8081
+    to:
+      kind: Service
+      name: ${NAME}
+    tls:
+      termination: edge
+parameters:
+- name: NAME
+  description: The name for the deployment config, service and route
+  required: true
+- name: DOCKER_IMAGE
+  description:
+  required: true
+- name: CONTAINER_PORT
+  description: The port which will be exposed as service and route
+  value: "8080"</code></pre>
 </div>
 </div>
 <div class="colist arabic">
@@ -476,7 +478,7 @@ oc rollout latest dc/jenkins</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight nowrap"><code data-lang="bash">oc process -f generic-template.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
+<pre class="highlightjs highlight nowrap"><code class="language-bash hljs" data-lang="bash">oc process -f generic-template.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
 oc rollout latest dc/jenkins</code></pre>
 </div>
 </div>
@@ -493,23 +495,23 @@ which allows to generate certificates. All we need to do is to add the annotatio
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight nowrap"><code data-lang="yml">- <span class="string"><span class="content">apiVersion: v1</span></span>
-  <span class="key">kind</span>: <span class="string"><span class="content">Service</span></span>
-  <span class="key">metadata</span>:
-    <span class="key">labels</span>:
-      <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-    <span class="key">name</span>: <span class="string"><span class="content">${NAME}</span></span>
-    <span class="key">annotations</span>:                                                        <i class="conum" data-value="1"></i><b>(1)</b>
-      <span class="key">service.alpha.openshift.io/serving-cert-secret-name</span>: <span class="string"><span class="content">${NAME}-cert </span></span><i class="conum" data-value="1"></i><b>(1)</b>
-  <span class="key">spec</span>:
-    <span class="key">ports</span>:
-    - <span class="string"><span class="content">port: &quot;${{CONTAINER_PORT}}&quot;</span></span>
-      <span class="key">protocol</span>: <span class="string"><span class="content">TCP</span></span>
-      <span class="key">targetPort</span>: <span class="string"><span class="delimiter">&quot;</span><span class="content">${{CONTAINER_PORT}}</span><span class="delimiter">&quot;</span></span>
-      <span class="key">name</span>: <span class="string"><span class="content">http</span></span>
-    <span class="key">selector</span>:
-      <span class="key">app</span>: <span class="string"><span class="content">${NAME}</span></span>
-      <span class="key">deploymentconfig</span>: <span class="string"><span class="content">${NAME}</span></span></code></pre>
+<pre class="highlightjs highlight nowrap"><code class="language-yaml hljs" data-lang="yaml">- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+    annotations:                                                        <i class="conum" data-value="1"></i><b>(1)</b>
+      service.alpha.openshift.io/serving-cert-secret-name: ${NAME}-cert <i class="conum" data-value="1"></i><b>(1)</b>
+  spec:
+    ports:
+    - port: "${{CONTAINER_PORT}}"
+      protocol: TCP
+      targetPort: "${{CONTAINER_PORT}}"
+      name: http
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}</code></pre>
 </div>
 </div>
 <div class="colist arabic">
@@ -525,19 +527,18 @@ which allows to generate certificates. All we need to do is to add the annotatio
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight nowrap"><code data-lang="bash">oc get secrets
+<pre class="highlightjs highlight nowrap"><code class="language-bash hljs" data-lang="bash">oc get secrets -o name
 
-NAME                       TYPE                                  DATA      AGE
-builder-dockercfg-vdw69    kubernetes.io/dockercfg               1         1h
-builder-token-303tx        kubernetes.io/service-account-token   4         1h
-builder-token-l1npj        kubernetes.io/service-account-token   4         1h
-default-dockercfg-2mndj    kubernetes.io/dockercfg               1         1h
-default-token-bxvrc        kubernetes.io/service-account-token   4         1h
-default-token-t0c70        kubernetes.io/service-account-token   4         1h
-deployer-dockercfg-7dbgn   kubernetes.io/dockercfg               1         1h
-deployer-token-1r1fk       kubernetes.io/service-account-token   4         1h
-deployer-token-k4qq7       kubernetes.io/service-account-token   4         1h
-jenkins-cert               kubernetes.io/tls                     2         16m <i class="conum" data-value="1"></i><b>(1)</b></code></pre>
+secret/builder-dockercfg-vdw69
+secret/builder-token-303tx
+secret/builder-token-l1npj
+secret/default-dockercfg-2mndj
+secret/default-token-bxvrc
+secret/default-token-t0c70
+secret/deployer-dockercfg-7dbgn
+secret/deployer-token-1r1fk
+secret/deployer-token-k4qq7
+secret/jenkins-cert <i class="conum" data-value="1"></i><b>(1)</b></code></pre>
 </div>
 </div>
 <div class="colist arabic">
@@ -556,7 +557,7 @@ jenkins-cert               kubernetes.io/tls                     2         16m <
 </div>
 <div class="listingblock">
 <div class="content">
-<pre>apiVersion: v1
+<pre class="highlightjs highlight nowrap"><code class="language-yaml hljs" data-lang="yaml">apiVersion: v1
 kind: Template
 metadata:
   name: generic-template
@@ -709,7 +710,7 @@ parameters:
   required: true
 - name: CONTAINER_PORT
   description: The port which will be exposed as service and route
-  value: "8080"</pre>
+  value: "8080"</code></pre>
 </div>
 </div>
 <div class="colist arabic">
@@ -755,7 +756,7 @@ In OpenShift 3.6 it should no longer be necessary to configure this when using s
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight nowrap"><code data-lang="bash">oc process -f generic-template-with-internal-encryption.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
+<pre class="highlightjs highlight nowrap"><code class="language-bash hljs" data-lang="bash">oc process -f generic-template-with-internal-encryption.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
 oc rollout latest dc/jenkins</code></pre>
 </div>
 </div>
@@ -825,6 +826,9 @@ oc rollout latest dc/jenkins</code></pre>
     </div>
 
   </div>
+
+  <script src="/assets/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
 
 </footer>
 

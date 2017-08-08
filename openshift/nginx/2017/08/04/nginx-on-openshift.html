@@ -9,6 +9,8 @@
   <title>How to run nginx on OpenShift?</title>
   <meta name="description" content="">
 
+  <link rel="stylesheet" href="/assets/highlight.js/styles/default.css">
+
   <link rel="stylesheet" href="/assets/main.css">
   <link rel="canonical" href="https://torstenwalter.github.io/openshift/nginx/2017/08/04/nginx-on-openshift.html">
   <link rel="alternate" type="application/rss+xml" title="Torsten Walter" href="/feed.xml">
@@ -111,7 +113,7 @@ because of OpenShift security constraints. If you want to learn more about it co
 <div class="listingblock">
 <div class="title">/etc/nginx/nginx.conf</div>
 <div class="content">
-<pre>user  nginx;
+<pre class="highlightjs highlight nowrap"><code class="language-nginx hljs" data-lang="nginx">user  nginx;
 worker_processes  1;
 
 error_log  /var/log/nginx/error.log warn; <i class="conum" data-value="1"></i><b>(1)</b>
@@ -141,7 +143,7 @@ http {
     #gzip  on;
 
     include /etc/nginx/conf.d/*.conf; <i class="conum" data-value="4"></i><b>(4)</b>
-}</pre>
+}</code></pre>
 </div>
 </div>
 <div class="colist arabic">
@@ -205,7 +207,7 @@ drwxr-xr-x 4 root root 4096 Jul 23 00:00 /var/run</pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>chmod g+rwx /var/cache/nginx /var/run /var/log/nginx</code></pre>
+<pre>chmod g+rwx /var/cache/nginx /var/run /var/log/nginx</pre>
 </div>
 </div>
 </div>
@@ -219,7 +221,7 @@ drwxr-xr-x 4 root root 4096 Jul 23 00:00 /var/run</pre>
 <div class="listingblock">
 <div class="title">/etc/nginx/conf.d/default.conf</div>
 <div class="content">
-<pre>server {
+<pre class="highlightjs highlight nowrap"><code class="language-nginx hljs" data-lang="nginx">server {
     listen       80; <i class="conum" data-value="1"></i><b>(1)</b>
     server_name  localhost;
 
@@ -262,7 +264,7 @@ drwxr-xr-x 4 root root 4096 Jul 23 00:00 /var/run</pre>
     #location ~ /\.ht {
     #    deny  all;
     #}
-}</pre>
+}</code></pre>
 </div>
 </div>
 <div class="colist arabic">
@@ -278,7 +280,7 @@ drwxr-xr-x 4 root root 4096 Jul 23 00:00 /var/run</pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>sed -i.bak 's/listen\(.*\)80;/listen 8081;/' /etc/nginx/conf.d/default.conf</code></pre>
+<pre>sed -i.bak 's/listen\(.*\)80;/listen 8081;/' /etc/nginx/conf.d/default.conf</pre>
 </div>
 </div>
 </div>
@@ -301,11 +303,11 @@ nginx: [warn] the "user" directive makes sense only if the master process runs w
 <div class="listingblock">
 <div class="title">/etc/nginx/nginx.conf</div>
 <div class="content">
-<pre>user  nginx;
+<pre class="highlightjs highlight nowrap"><code class="language-nginx hljs" data-lang="nginx">user  nginx;
 worker_processes  1;
 
 error_log  /var/log/nginx/error.log warn;
-...</pre>
+...</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -327,7 +329,7 @@ error_log  /var/log/nginx/error.log warn;
 <div class="listingblock">
 <div class="title">Dockerfile</div>
 <div class="content">
-<pre>FROM nginx:stable
+<pre class="highlightjs highlight nowrap"><code class="language-docker hljs" data-lang="docker">FROM nginx:stable
 
 # support running as arbitrary user which belogs to the root group
 RUN chmod g+rwx /var/cache/nginx /var/run /var/log/nginx
@@ -335,7 +337,7 @@ RUN chmod g+rwx /var/cache/nginx /var/run /var/log/nginx
 RUN sed -i.bak 's/listen\(.*\)80;/listen 8081;/' /etc/nginx/conf.d/default.conf
 EXPOSE 8081
 # comment user directive as master process is run as user in OpenShift anyhow
-RUN sed -i.bak 's/^user/#user/' /etc/nginx/nginx.conf</pre>
+RUN sed -i.bak 's/^user/#user/' /etc/nginx/nginx.conf</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -352,8 +354,8 @@ The tags follow the official nginx tags. All images should automatically be rebu
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>oc new-app twalter/openshift-nginx:stable --name nginx-stable
-oc expose svc nginx-stable --port=8081</code></pre>
+<pre>oc new-app twalter/openshift-nginx:stable --name nginx-stable
+oc expose svc nginx-stable --port=8081</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -364,8 +366,8 @@ oc expose svc nginx-stable --port=8081</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>oc new-app twalter/openshift-nginx:latest --name nginx-latest
-oc expose svc nginx-latest --port=8081</code></pre>
+<pre>oc new-app twalter/openshift-nginx:latest --name nginx-latest
+oc expose svc nginx-latest --port=8081</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -373,8 +375,8 @@ oc expose svc nginx-latest --port=8081</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>oc new-app twalter/openshift-nginx:mainline-alpine --name nginx-mainline-alpine
-oc expose svc nginx-mainline-alpine --port=8081</code></pre>
+<pre>oc new-app twalter/openshift-nginx:mainline-alpine --name nginx-mainline-alpine
+oc expose svc nginx-mainline-alpine --port=8081</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -384,7 +386,7 @@ the modifications described above.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="CodeRay highlight"><code>oc process -f https://raw.githubusercontent.com/torstenwalter/openshift-nginx/master/tests/nginx-template.yml NAME=nginx-stable-alpine NGINX_VERSION=stable-alpine |oc apply -f -</code></pre>
+<pre>oc process -f https://raw.githubusercontent.com/torstenwalter/openshift-nginx/master/tests/nginx-template.yml NAME=nginx-stable-alpine NGINX_VERSION=stable-alpine |oc apply -f -</pre>
 </div>
 </div>
 </div>
@@ -446,6 +448,9 @@ the modifications described above.</p>
     </div>
 
   </div>
+
+  <script src="/assets/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
 
 </footer>
 
