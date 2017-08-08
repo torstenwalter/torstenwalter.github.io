@@ -15,6 +15,7 @@ gem "jekyll", "3.3.1"
 gem "minima", "~> 2.0"
 gem 'coderay', '~> 1.1.0'
 gem 'rake-jekyll', '~> 1.1.0'
+gem 'jekyll-sitemap', '~> 1.1.1'
 
 # If you want to use GitHub Pages, remove the "gem "jekyll"" above and
 # uncomment the line below. To upgrade, run `bundle update github-pages`.
