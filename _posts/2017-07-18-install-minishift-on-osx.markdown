@@ -58,3 +58,7 @@ brew cask install minishift
 minishift start
 ```
 
+alternatively you could start minishift using different disk size or memory parameters
+```
+minishift start --disk-size 100g --memory 4096
+```
