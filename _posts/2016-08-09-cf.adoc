@@ -1,0 +1,4 @@
+= Useful Cloud Foundry commands
+
+set CF_TRACE true
+set CF_TRACE false

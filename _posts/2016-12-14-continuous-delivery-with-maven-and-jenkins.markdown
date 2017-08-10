@@ -4,6 +4,7 @@ title:  "Continuous Delivery with Maven and Jenkins"
 date:   2016-12-14 13:30:00 +0100
 categories: maven jenkins
 excerpt: How to automatically create unique version numbers with Maven in Jenkins.
+author: Torsten Walter
 ---
 
 Motivation: Every jenkins build produces a potential release and as such each build should have a unique version number.
