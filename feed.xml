@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.3.1">Jekyll</generator><link href="https://torstenwalter.de/feed.xml" rel="self" type="application/atom+xml" /><link href="https://torstenwalter.de/" rel="alternate" type="text/html" /><updated>2017-08-11T10:59:30+00:00</updated><id>https://torstenwalter.de/</id><title type="html">Torsten Walter - technical notes</title><subtitle>A blog about technical stuff I am working on in my spare time e.g. continuous integration (CI), continuous deployment, Jenkins, Docker and OpenShift.
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.3.1">Jekyll</generator><link href="https://torstenwalter.de/feed.xml" rel="self" type="application/atom+xml" /><link href="https://torstenwalter.de/" rel="alternate" type="text/html" /><updated>2017-08-12T18:08:36+00:00</updated><id>https://torstenwalter.de/</id><title type="html">Torsten Walter - technical notes</title><subtitle>A blog about technical stuff I am working on in my spare time e.g. continuous integration (CI), continuous deployment, Jenkins, Docker and OpenShift.
 </subtitle><author><name>Torsten Walter</name></author><entry><title type="html">How to use nginx as a sidecar container to encrypt network traffic in OpenShift?</title><link href="https://torstenwalter.de/openshift/nginx/sidecar/tls/encryption/certificates/2017/08/07/nginx-as-sidecar-container-to-secure-openshift-traffic.html" rel="alternate" type="text/html" title="How to use nginx as a sidecar container to encrypt network traffic in OpenShift?" /><published>2017-08-07T10:00:00+00:00</published><updated>2017-08-07T10:00:00+00:00</updated><id>https://torstenwalter.de/openshift/nginx/sidecar/tls/encryption/certificates/2017/08/07/nginx-as-sidecar-container-to-secure-openshift-traffic</id><content type="html" xml:base="https://torstenwalter.de/openshift/nginx/sidecar/tls/encryption/certificates/2017/08/07/nginx-as-sidecar-container-to-secure-openshift-traffic.html">&lt;div id=&quot;toc&quot; class=&quot;toc&quot;&gt;
 &lt;div id=&quot;toctitle&quot;&gt;Table of Contents&lt;/div&gt;
 &lt;ul class=&quot;sectlevel1&quot;&gt;
@@ -284,7 +284,7 @@ objects:
   metadata:                                 &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
     name: ${NAME}-nginx-config              &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
   data:                                     &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
-    grafana-nginx.conf: |                   &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+    app-nginx.conf: |                       &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
       server {                              &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
         listen 8081;                        &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt; &lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;(2)&lt;/b&gt;
         index index.html index.htm;         &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
@@ -495,7 +495,7 @@ objects:
   metadata:
     name: ${NAME}-nginx-config
   data:
-    grafana-nginx.conf: |
+    app-nginx.conf: |
       server {
         listen 8443 ssl;                               &lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;(4)&lt;/b&gt;
         ssl_certificate /etc/nginx/certs/tls.crt;      &lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;(4)&lt;/b&gt;

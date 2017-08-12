@@ -385,7 +385,7 @@ objects:
   metadata:                                 <i class="conum" data-value="1"></i><b>(1)</b>
     name: ${NAME}-nginx-config              <i class="conum" data-value="1"></i><b>(1)</b>
   data:                                     <i class="conum" data-value="1"></i><b>(1)</b>
-    grafana-nginx.conf: |                   <i class="conum" data-value="1"></i><b>(1)</b>
+    app-nginx.conf: |                       <i class="conum" data-value="1"></i><b>(1)</b>
       server {                              <i class="conum" data-value="1"></i><b>(1)</b>
         listen 8081;                        <i class="conum" data-value="1"></i><b>(1)</b> <i class="conum" data-value="2"></i><b>(2)</b>
         index index.html index.htm;         <i class="conum" data-value="1"></i><b>(1)</b>
@@ -596,7 +596,7 @@ objects:
   metadata:
     name: ${NAME}-nginx-config
   data:
-    grafana-nginx.conf: |
+    app-nginx.conf: |
       server {
         listen 8443 ssl;                               <i class="conum" data-value="4"></i><b>(4)</b>
         ssl_certificate /etc/nginx/certs/tls.crt;      <i class="conum" data-value="4"></i><b>(4)</b>
