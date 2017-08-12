@@ -242,7 +242,7 @@ objects:
   metadata:                                 // <1>
     name: ${NAME}-nginx-config              // <1>
   data:                                     // <1>
-    grafana-nginx.conf: |                   // <1>
+    app-nginx.conf: |                       // <1>
       server {                              // <1>
         listen 8081;                        // <1> <2>
         index index.html index.htm;         // <1>
@@ -417,7 +417,7 @@ objects:
   metadata:
     name: ${NAME}-nginx-config
   data:
-    grafana-nginx.conf: |
+    app-nginx.conf: |
       server {
         listen 8443 ssl;                               // <4>
         ssl_certificate /etc/nginx/certs/tls.crt;      // <4>
