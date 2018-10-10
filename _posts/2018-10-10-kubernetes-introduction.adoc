@@ -1,0 +1,150 @@
+---
+layout: post
+title:  "Kubernetes Basics"
+date:   2018-10-10 13:00:00 +0200
+categories: kubernetes
+excerpt: Introduction to Kubernetes
+author: Torsten Walter
+---
+:toc:
+
+
+== Pods
+
+[quote, Kubernetes Documentation - Pod Overview, https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/]
+____
+A Pod is the basic building block of Kubernetes–the smallest and simplest unit in the Kubernetes object model that you create or deploy. A Pod represents a running process on your cluster.
+____
+
+=== Simple Pod
+
+.pods/simple-pod.yaml
+[source,yaml]
+----
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+  - name: nginx
+    image: nginx::1.15.5
+    ports:
+    - containerPort: 80
+----
+
+Create the pod by applying it's yaml file:
+
+  kubectl apply -f simple-pod.yaml
+
+
+List all Pods:
+
+ kubectl get pods
+
+Get a specific pod:
+
+ kubectl get pod nginx
+ kubectl get pod nginx -o yaml
+ kubectl get pod nginx -o yaml --export # Exported resources are stripped of cluster-specific information
+
+Descibe a pod:
+
+ kubectl describe pod nginx
+
+
+=== Pod with two containers
+
+.pods/sidecar-pod.yml
+[source,yaml]
+----
+apiVersion: v1
+kind: Pod
+metadata:
+  name: www
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.15.5
+    volumeMounts: <3>
+    - mountPath: /usr/share/nginx
+      name: www-data
+      readOnly: true
+  - name: git-sync
+    image: k8s.gcr.io/git-sync-amd64:v2.0.6
+    args:
+    - "--repo=https://github.com/torstenwalter/static-html"
+    - "--root=/data"
+    - "--dest=html"
+    - "--branch=master"
+    - "--wait=30"
+    volumeMounts: <4>
+    - mountPath: /data
+      name: www-data
+  volumes:
+  - name: www-data <1>
+    emptyDir: {} <2>
+----
+
+<1> We use one volume named www-data to store the files which should be served by nginx
+<2> Creates a new directory that exists as long as the Pod is running on the node, but it can persist across container failures and restarts.
+<3> The volume is mounted in read only mode into the ngix container to serve the static files
+<4> The `git-sync` container mounts the same volume to a different directory it clones a git repo there
+
+
+Exec into the pod:
+
+  kubectl exec -it www /bin/bash
+  cat /usr/share/nginx/html/index.html
+
+
+Describe pod with slightly different syntax (pod/www | -n)
+
+  kubectl describe pod/www -n demo
+
+The first command below is ok. The second fails. Why?
+
+  kubectl exec -it www -c nginx /bin/bash
+  kubectl exec -it www -c git-sync /bin/bash
+
+
+  kubectl exec www -c nginx ls /usr/share/nginx/html/
+  kubectl exec www -c nginx cat /usr/share/nginx/html/index.html
+  kubectl exec www -c git-sync ls /data
+
+The command below fails. Why? How to fix it?
+
+  kubectl exec www -c git-sync ls -alh /data
+
+
+## probes
+
+Get more information about possible pod fields:
+
+  kubectl explain pod
+  kubectl explain pod.spec
+  kubectl explain pod.spec.containers
+
+== Deployment
+
+Cleanup all unused resource
+
+  kubectl get all -o name
+  kubectl get all -o name| xargs kubectl delete
+
+
+
+TODO: convert nginx into deployment
+
+TODO: ingress
+
+TODO: scale
+
+TODO: init container with hostname + ip
+
+
+
+
+
+kubectl autocomplete
+kns
