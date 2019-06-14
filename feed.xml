@@ -1,5 +1,41 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.3.1">Jekyll</generator><link href="https://torstenwalter.de/feed.xml" rel="self" type="application/atom+xml" /><link href="https://torstenwalter.de/" rel="alternate" type="text/html" /><updated>2018-10-10T06:17:46+00:00</updated><id>https://torstenwalter.de/</id><title type="html">Torsten Walter - technical notes</title><subtitle>A blog about technical stuff I am working on in my spare time e.g. continuous integration (CI), continuous deployment, Jenkins, Docker and OpenShift.
-</subtitle><author><name>Torsten Walter</name></author><entry><title type="html">How to use nginx as a sidecar container to encrypt network traffic in OpenShift?</title><link href="https://torstenwalter.de/openshift/nginx/sidecar/tls/encryption/certificates/2017/08/07/nginx-as-sidecar-container-to-secure-openshift-traffic.html" rel="alternate" type="text/html" title="How to use nginx as a sidecar container to encrypt network traffic in OpenShift?" /><published>2017-08-07T10:00:00+00:00</published><updated>2017-08-07T10:00:00+00:00</updated><id>https://torstenwalter.de/openshift/nginx/sidecar/tls/encryption/certificates/2017/08/07/nginx-as-sidecar-container-to-secure-openshift-traffic</id><content type="html" xml:base="https://torstenwalter.de/openshift/nginx/sidecar/tls/encryption/certificates/2017/08/07/nginx-as-sidecar-container-to-secure-openshift-traffic.html">&lt;div id=&quot;toc&quot; class=&quot;toc&quot;&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.3.1">Jekyll</generator><link href="https://torstenwalter.de/feed.xml" rel="self" type="application/atom+xml" /><link href="https://torstenwalter.de/" rel="alternate" type="text/html" /><updated>2019-06-14T13:11:26+00:00</updated><id>https://torstenwalter.de/</id><title type="html">Torsten Walter - technical notes</title><subtitle>A blog about technical stuff I am working on in my spare time e.g. continuous integration (CI), continuous deployment, Jenkins, Docker and OpenShift.
+</subtitle><author><name>Torsten Walter</name></author><entry><title type="html">How to install VirtualBox on Ubuntu 18.04 when secure boot is active</title><link href="https://torstenwalter.de/virtualbox/ubuntu/2019/06/13/install-virtualbox-ubuntu-secure-boot.html" rel="alternate" type="text/html" title="How to install VirtualBox on Ubuntu 18.04 when secure boot is active" /><published>2019-06-13T18:00:00+00:00</published><updated>2019-06-13T18:00:00+00:00</updated><id>https://torstenwalter.de/virtualbox/ubuntu/2019/06/13/install-virtualbox-ubuntu-secure-boot</id><content type="html" xml:base="https://torstenwalter.de/virtualbox/ubuntu/2019/06/13/install-virtualbox-ubuntu-secure-boot.html">&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo update-secureboot-policy --new-key
+find $(dirname $(modinfo -n vboxdrv)) -name &quot;*.ko&quot; -exec sudo kmodsign sha512 /var/lib/shim-signed/mok/MOK.priv /var/lib/shim-signed/mok/MOK.der {} \;
+sudo update-secureboot-policy --enroll-key
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h1 id=&quot;generate-a-key-for-signing-your-kernel-modules&quot;&gt;Generate a key for signing your kernel modules:&lt;/h1&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;openssl req -new -x509 -newkey rsa:2048 -keyout MOK.priv -outform DER -out MOK.der -nodes -days 36500 -subj &quot;/CN=DKMS signing key/&quot;
+
+sudo mokutil --import MOK.der
+
+sudo mv MOK.* /root/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;http://lektiondestages.blogspot.com/2018/04/signing-your-kernel-modules-on-ubuntu.html&lt;/p&gt;
+
+&lt;h1 id=&quot;reboot-and-add-the-key&quot;&gt;Reboot and add the key&lt;/h1&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;You will be presented a blue text screen. Choose “Enroll MOK”, then you can choose to view your key or just “Continue”. Choose “Yes” and input the password from before. Your key should be added now and you can reboot.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;http://lektiondestages.blogspot.com/2018/04/signing-your-kernel-modules-on-ubuntu.html&lt;/p&gt;
+
+&lt;h1 id=&quot;sign-the-virtualbox-kernel-modules&quot;&gt;Sign the virtualbox kernel modules&lt;/h1&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;find $(dirname $(modinfo -n vboxdrv)) -name &quot;*.ko&quot; -exec sudo kmodsign sha512 /root/MOK.priv /root/MOK.der {} \;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h1 id=&quot;load-the-kernel-modules&quot;&gt;Load the kernel modules&lt;/h1&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;modprobe vboxdrv
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;</content><author><name>Torsten Walter</name></author><summary type="html">sudo update-secureboot-policy --new-key find $(dirname $(modinfo -n vboxdrv)) -name &quot;*.ko&quot; -exec sudo kmodsign sha512 /var/lib/shim-signed/mok/MOK.priv /var/lib/shim-signed/mok/MOK.der {} \; sudo update-secureboot-policy --enroll-key</summary></entry><entry><title type="html">How to use nginx as a sidecar container to encrypt network traffic in OpenShift?</title><link href="https://torstenwalter.de/openshift/nginx/sidecar/tls/encryption/certificates/2017/08/07/nginx-as-sidecar-container-to-secure-openshift-traffic.html" rel="alternate" type="text/html" title="How to use nginx as a sidecar container to encrypt network traffic in OpenShift?" /><published>2017-08-07T10:00:00+00:00</published><updated>2017-08-07T10:00:00+00:00</updated><id>https://torstenwalter.de/openshift/nginx/sidecar/tls/encryption/certificates/2017/08/07/nginx-as-sidecar-container-to-secure-openshift-traffic</id><content type="html" xml:base="https://torstenwalter.de/openshift/nginx/sidecar/tls/encryption/certificates/2017/08/07/nginx-as-sidecar-container-to-secure-openshift-traffic.html">&lt;div id=&quot;toc&quot; class=&quot;toc&quot;&gt;
 &lt;div id=&quot;toctitle&quot;&gt;Table of Contents&lt;/div&gt;
 &lt;ul class=&quot;sectlevel1&quot;&gt;
 &lt;li&gt;&lt;a href=&quot;#basic_template_with_tls_termination_at_the_edge_router&quot;&gt;Basic template with TLS termination at the edge router&lt;/a&gt;&lt;/li&gt;
