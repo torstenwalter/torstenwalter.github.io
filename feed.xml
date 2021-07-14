@@ -1,0 +1,1272 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="https://torstenwalter.de/feed.xml" rel="self" type="application/atom+xml" /><link href="https://torstenwalter.de/" rel="alternate" type="text/html" /><updated>2021-07-14T16:44:45+00:00</updated><id>https://torstenwalter.de/feed.xml</id><title type="html">Torsten Walter - technical notes</title><subtitle>A blog about technical stuff I am working on in my spare time e.g. continuous integration (CI), continuous deployment, Jenkins, Docker and OpenShift.
+</subtitle><author><name>Torsten Walter</name></author><entry><title type="html">How to install VirtualBox on Ubuntu 18.04 when secure boot is active</title><link href="https://torstenwalter.de/virtualbox/ubuntu/2019/06/13/install-virtualbox-ubuntu-secure-boot.html" rel="alternate" type="text/html" title="How to install VirtualBox on Ubuntu 18.04 when secure boot is active" /><published>2019-06-13T18:00:00+00:00</published><updated>2019-06-13T18:00:00+00:00</updated><id>https://torstenwalter.de/virtualbox/ubuntu/2019/06/13/install-virtualbox-ubuntu-secure-boot</id><content type="html" xml:base="https://torstenwalter.de/virtualbox/ubuntu/2019/06/13/install-virtualbox-ubuntu-secure-boot.html">&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo update-secureboot-policy --new-key
+find $(dirname $(modinfo -n vboxdrv)) -name &quot;*.ko&quot; -exec sudo kmodsign sha512 /var/lib/shim-signed/mok/MOK.priv /var/lib/shim-signed/mok/MOK.der {} \;
+sudo update-secureboot-policy --enroll-key
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h1 id=&quot;generate-a-key-for-signing-your-kernel-modules&quot;&gt;Generate a key for signing your kernel modules:&lt;/h1&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;openssl req -new -x509 -newkey rsa:2048 -keyout MOK.priv -outform DER -out MOK.der -nodes -days 36500 -subj &quot;/CN=DKMS signing key/&quot;
+
+sudo mokutil --import MOK.der
+
+sudo mv MOK.* /root/
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;http://lektiondestages.blogspot.com/2018/04/signing-your-kernel-modules-on-ubuntu.html&lt;/p&gt;
+
+&lt;h1 id=&quot;reboot-and-add-the-key&quot;&gt;Reboot and add the key&lt;/h1&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;You will be presented a blue text screen. Choose “Enroll MOK”, then you can choose to view your key or just “Continue”. Choose “Yes” and input the password from before. Your key should be added now and you can reboot.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;http://lektiondestages.blogspot.com/2018/04/signing-your-kernel-modules-on-ubuntu.html&lt;/p&gt;
+
+&lt;h1 id=&quot;sign-the-virtualbox-kernel-modules&quot;&gt;Sign the virtualbox kernel modules&lt;/h1&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;find $(dirname $(modinfo -n vboxdrv)) -name &quot;*.ko&quot; -exec sudo kmodsign sha512 /root/MOK.priv /root/MOK.der {} \;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h1 id=&quot;load-the-kernel-modules&quot;&gt;Load the kernel modules&lt;/h1&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;modprobe vboxdrv
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;</content><author><name>Torsten Walter</name></author><category term="virtualbox" /><category term="ubuntu" /><summary type="html">sudo update-secureboot-policy --new-key find $(dirname $(modinfo -n vboxdrv)) -name &quot;*.ko&quot; -exec sudo kmodsign sha512 /var/lib/shim-signed/mok/MOK.priv /var/lib/shim-signed/mok/MOK.der {} \; sudo update-secureboot-policy --enroll-key</summary></entry><entry><title type="html">How to use nginx as a sidecar container to encrypt network traffic in OpenShift?</title><link href="https://torstenwalter.de/openshift/nginx/sidecar/tls/encryption/certificates/2017/08/07/nginx-as-sidecar-container-to-secure-openshift-traffic.html" rel="alternate" type="text/html" title="How to use nginx as a sidecar container to encrypt network traffic in OpenShift?" /><published>2017-08-07T10:00:00+00:00</published><updated>2017-08-07T10:00:00+00:00</updated><id>https://torstenwalter.de/openshift/nginx/sidecar/tls/encryption/certificates/2017/08/07/nginx-as-sidecar-container-to-secure-openshift-traffic</id><content type="html" xml:base="https://torstenwalter.de/openshift/nginx/sidecar/tls/encryption/certificates/2017/08/07/nginx-as-sidecar-container-to-secure-openshift-traffic.html">&lt;div id=&quot;toc&quot; class=&quot;toc&quot;&gt;
+&lt;div id=&quot;toctitle&quot;&gt;Table of Contents&lt;/div&gt;
+&lt;ul class=&quot;sectlevel1&quot;&gt;
+&lt;li&gt;&lt;a href=&quot;#basic_template_with_tls_termination_at_the_edge_router&quot;&gt;Basic template with TLS termination at the edge router&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;#enhanced_template_with_tls_encryption_from_the_edge_router_to_the_application&quot;&gt;Enhanced template with TLS encryption from the edge router to the application&lt;/a&gt;
+&lt;ul class=&quot;sectlevel2&quot;&gt;
+&lt;li&gt;&lt;a href=&quot;#add_nginx_image&quot;&gt;Add nginx image&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;#forward_the_traffic_to_our_application&quot;&gt;Forward the traffic to our application&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;#securing_traffic_from_the_edge_router_to_nginx&quot;&gt;Securing traffic from the edge router to nginx&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;OpenShift allows you to secure your applications by using secured routes. This way TLS termination
+can be done at the edge router and traffic from the outside to your router is encrypted.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Traffic from the router to the application is still unencrypted. If you want added security it&amp;#8217;s possible to encrypt
+this traffic as well. This article shows you how nginx can be used as a sidecar container to do the tls termination for
+your pod.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;basic_template_with_tls_termination_at_the_edge_router&quot;&gt;Basic template with TLS termination at the edge router&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Let&amp;#8217;s start with a simple deployment template: consisting og: A deployment config, one service and a route which is configured to do tls termination.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;generic-template.yml&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;highlightjs highlight nowrap&quot;&gt;&lt;code class=&quot;language-yaml hljs&quot; data-lang=&quot;yaml&quot;&gt;apiVersion: v1
+kind: Template
+metadata:
+  name: generic-template
+  annotations:
+    description: &quot;A generic template which creates a DeploymentConfig, Service and Route for a given docker image&quot;
+    tags: &quot;webserver&quot;
+objects:
+- apiVersion: v1
+  kind: DeploymentConfig &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    replicas: 1
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+          deploymentconfig: ${NAME}
+      spec:
+        containers:
+        - image: ${DOCKER_IMAGE}
+          imagePullPolicy: Always
+          name: application
+          ports:
+          - containerPort: &quot;${{CONTAINER_PORT}}&quot;
+            protocol: TCP
+          terminationMessagePath: /dev/termination-log
+    triggers: {}
+- apiVersion: v1
+  kind: Service &lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;(2)&lt;/b&gt;
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    ports:
+    - port: &quot;${{CONTAINER_PORT}}&quot;
+      protocol: TCP
+      targetPort: &quot;${{CONTAINER_PORT}}&quot;
+      name: http
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+- apiVersion: v1
+  kind: Route &lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;(3)&lt;/b&gt;
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    port:
+      targetPort: &quot;${{CONTAINER_PORT}}&quot;
+    to:
+      kind: Service
+      name: ${NAME}
+    tls:
+      termination: edge
+parameters:
+- name: NAME
+  description: The name for the deployment config, service and route
+  required: true
+- name: DOCKER_IMAGE
+  description:
+  required: true
+- name: CONTAINER_PORT
+  description: The port which will be exposed as service and route
+  value: &quot;8080&quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;The template is contains the following components:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;colist arabic&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;1&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;A deployment config which uses the &lt;code&gt;NAME&lt;/code&gt; and &lt;code&gt;DOCKER_IMAGE&lt;/code&gt; parameters to run the application and specified the &lt;code&gt;CONTAINER_PORT&lt;/code&gt;.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;2&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;A service routing traffic to the pod(s) instantiated by the DeploymentConfig.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;3&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;A route exposing the service and doing tls termination at the &lt;code&gt;edge&lt;/code&gt; router.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;You can use this template by applying the parameters and starting a manual deployment (as the triggers are set to be empty).
+The example below uses it to instantiate a jenkins instance:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;highlightjs highlight nowrap&quot;&gt;&lt;code class=&quot;language-bash hljs&quot; data-lang=&quot;bash&quot;&gt;oc process -f generic-template.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
+oc rollout latest dc/jenkins&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;After a short moment the application should be running and being accessible via https.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;enhanced_template_with_tls_encryption_from_the_edge_router_to_the_application&quot;&gt;Enhanced template with TLS encryption from the edge router to the application&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Now that we have the application running we can extend the template to include nginx as a second container in our
+deployment which should do TLS termination for traffic from the edge router and forward it to our application. As both
+containers are part of the same POD they will be placed on the same node and one can reach each other via localhost and
+no network traffic between the two goes over the wire.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect2&quot;&gt;
+&lt;h3 id=&quot;add_nginx_image&quot;&gt;Add nginx image&lt;/h3&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;As first step let&amp;#8217;s add the nginx image and route traffice to nginx instead of our container.
+This way we can check if nginx is working.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;highlightjs highlight nowrap&quot;&gt;&lt;code class=&quot;language-yaml hljs&quot; data-lang=&quot;yaml&quot;&gt;apiVersion: v1
+kind: Template
+metadata:
+  name: generic-template
+  annotations:
+    description: &quot;A generic template which creates a DeploymentConfig, Service and Route for a given docker image&quot;
+    tags: &quot;webserver&quot;
+objects:
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    replicas: 1
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+          deploymentconfig: ${NAME}
+      spec:
+        containers:
+        - image: ${DOCKER_IMAGE}
+          imagePullPolicy: Always
+          name: application
+          ports:
+          - containerPort: &quot;${{CONTAINER_PORT}}&quot;
+            protocol: TCP
+          terminationMessagePath: /dev/termination-log
+        - image: twalter/openshift-nginx:stable-alpine &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+          imagePullPolicy: Always                      &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+          name: nginx                                  &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+          ports:                                       &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+          - containerPort: 8081                        &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+            protocol: TCP                              &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+    triggers: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    ports:
+    - port: 8081       &lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;(2)&lt;/b&gt;
+      protocol: TCP
+      targetPort: 8081 &lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;(2)&lt;/b&gt;
+      name: http
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+- apiVersion: v1
+  kind: Route
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    port:
+      targetPort: 8081 &lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;(2)&lt;/b&gt;
+    to:
+      kind: Service
+      name: ${NAME}
+    tls:
+      termination: edge
+parameters:
+- name: NAME
+  description: The name for the deployment config, service and route
+  required: true
+- name: DOCKER_IMAGE
+  description:
+  required: true
+- name: CONTAINER_PORT
+  description: The port which will be exposed as service and route
+  value: &quot;8080&quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;colist arabic&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;1&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;These lines add nginx and expose port 8081. Notice that we use twalter/openshift-nginx instead of nginx, because the official one does not run on OpenShift.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;2&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;Forward all traffic to port 8081 where nginx is listening.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;We can now apply this template:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;highlightjs highlight nowrap&quot;&gt;&lt;code class=&quot;language-bash hljs&quot; data-lang=&quot;bash&quot;&gt;oc process -f generic-template.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
+oc rollout latest dc/jenkins&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;We should see a &quot;Welcome to nginx!&quot; page.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect2&quot;&gt;
+&lt;h3 id=&quot;forward_the_traffic_to_our_application&quot;&gt;Forward the traffic to our application&lt;/h3&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Now that nginx is running we can configure it to forward incoming requests to our application.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;highlightjs highlight nowrap&quot;&gt;&lt;code class=&quot;language-yaml hljs&quot; data-lang=&quot;yaml&quot;&gt;apiVersion: v1
+kind: Template
+metadata:
+  name: generic-template
+  annotations:
+    description: &quot;A generic template which creates a DeploymentConfig, Service and Route for a given docker image&quot;
+    tags: &quot;webserver&quot;
+objects:
+- kind: ConfigMap                           &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+  apiVersion: v1                            &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+  metadata:                                 &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+    name: ${NAME}-nginx-config              &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+  data:                                     &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+    app-nginx.conf: |                       &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+      server {                              &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+        listen 8081;                        &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt; &lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;(2)&lt;/b&gt;
+        index index.html index.htm;         &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+
+        location / {                        &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+         proxy_pass http://localhost:8080/; &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+        }                                   &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+      }                                     &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    replicas: 1
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+          deploymentconfig: ${NAME}
+      spec:
+        containers:
+        - image: ${DOCKER_IMAGE}
+          imagePullPolicy: Always
+          name: application
+          ports:
+          - containerPort: &quot;${{CONTAINER_PORT}}&quot;
+            protocol: TCP
+          terminationMessagePath: /dev/termination-log
+        - image: twalter/openshift-nginx:stable-alpine
+          imagePullPolicy: Always
+          name: nginx
+          ports:
+          - containerPort: 8081
+            protocol: TCP
+          volumeMounts:                       &lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;(4)&lt;/b&gt;
+          - mountPath: /etc/nginx/conf.d/     &lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;(4)&lt;/b&gt;
+            name: nginx-config-volume &lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;(4)&lt;/b&gt;
+        initContainers:
+        - name: init-mydb
+          image: busybox
+          command: ['sh', '-c', 'until nslookup mydb; do echo waiting for mydb; sleep 2; done;']
+        volumes:                             &lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;(3)&lt;/b&gt;
+        - configMap:                         &lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;(3)&lt;/b&gt;
+            defaultMode: 420                 &lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;(3)&lt;/b&gt;
+            name: ${NAME}-nginx-config       &lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;(3)&lt;/b&gt;
+          name: nginx-config-volume  &lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;(3)&lt;/b&gt;
+    triggers: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    ports:
+    - port: 8081
+      protocol: TCP
+      targetPort: 8081
+      name: http
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+- apiVersion: v1
+  kind: Route
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    port:
+      targetPort: 8081
+    to:
+      kind: Service
+      name: ${NAME}
+    tls:
+      termination: edge
+parameters:
+- name: NAME
+  description: The name for the deployment config, service and route
+  required: true
+- name: DOCKER_IMAGE
+  description:
+  required: true
+- name: CONTAINER_PORT
+  description: The port which will be exposed as service and route
+  value: &quot;8080&quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;colist arabic&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;1&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;We use a config map to provide the nginx configuration file&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;2&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;Note that the port is hardcoded in the file so it needs to be adapted in case your application uses a different one.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;3&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;Configure the config map as volume&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;4&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;Mount the volume into the nginx container&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;After applying this template we should see the our application again.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;highlightjs highlight nowrap&quot;&gt;&lt;code class=&quot;language-bash hljs&quot; data-lang=&quot;bash&quot;&gt;oc process -f generic-template.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
+oc rollout latest dc/jenkins&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;We should see a &quot;Welcome to nginx!&quot; page.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect2&quot;&gt;
+&lt;h3 id=&quot;securing_traffic_from_the_edge_router_to_nginx&quot;&gt;Securing traffic from the edge router to nginx&lt;/h3&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Service serving certificate secrets
+First of all we need a certificate in order to do TLS. Luckily OpenShift has a feature called &lt;a href=&quot;https://docs.openshift.com/online/dev_guide/secrets.html#service-serving-certificate-secrets&quot;&gt;Service Serving Certificate Secrets&lt;/a&gt;
+which allows to generate certificates. All we need to do is to add the annotation as shown below:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;highlightjs highlight nowrap&quot;&gt;&lt;code class=&quot;language-yaml hljs&quot; data-lang=&quot;yaml&quot;&gt;- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+    annotations:                                                        &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+      service.alpha.openshift.io/serving-cert-secret-name: ${NAME}-cert &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+  spec:
+    ports:
+    - port: &quot;${{CONTAINER_PORT}}&quot;
+      protocol: TCP
+      targetPort: &quot;${{CONTAINER_PORT}}&quot;
+      name: http
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;colist arabic&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;1&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;The necessary annotation to let OpenShift generate a certificate for us.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Once we apply this configuration we can check if the secret has been generated for us:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;highlightjs highlight nowrap&quot;&gt;&lt;code class=&quot;language-bash hljs&quot; data-lang=&quot;bash&quot;&gt;oc get secrets -o name
+
+secret/builder-dockercfg-vdw69
+secret/builder-token-303tx
+secret/builder-token-l1npj
+secret/default-dockercfg-2mndj
+secret/default-token-bxvrc
+secret/default-token-t0c70
+secret/deployer-dockercfg-7dbgn
+secret/deployer-token-1r1fk
+secret/deployer-token-k4qq7
+secret/jenkins-cert &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;colist arabic&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;1&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;generated tls secret&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Now let&amp;#8217;s use this certificate to secure nginx:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;generic-template-with-internal-encryption.yml&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;highlightjs highlight nowrap&quot;&gt;&lt;code class=&quot;language-yaml hljs&quot; data-lang=&quot;yaml&quot;&gt;apiVersion: v1
+kind: Template
+metadata:
+  name: generic-template
+  annotations:
+    description: &quot;A generic template which creates a DeploymentConfig, Service and Route for a given docker image&quot;
+    tags: &quot;webserver&quot;
+objects:
+- kind: ConfigMap
+  apiVersion: v1
+  metadata:
+    name: ${NAME}-nginx-config
+  data:
+    app-nginx.conf: |
+      server {
+        listen 8443 ssl;                               &lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;(4)&lt;/b&gt;
+        ssl_certificate /etc/nginx/certs/tls.crt;      &lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;(4)&lt;/b&gt;
+        ssl_certificate_key /etc/nginx/certs/tls.key;  &lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;(4)&lt;/b&gt;
+        index index.html index.htm;
+
+        location / {
+         proxy_pass http://localhost:8080/;
+        }
+      }
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    replicas: 1
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+          deploymentconfig: ${NAME}
+      spec:
+        containers:
+        - image: ${DOCKER_IMAGE}
+          imagePullPolicy: Always
+          name: application
+          ports:
+          - containerPort: &quot;${{CONTAINER_PORT}}&quot;
+            protocol: TCP
+          terminationMessagePath: /dev/termination-log
+        - image: twalter/openshift-nginx:stable-alpine
+          imagePullPolicy: Always
+          name: nginx
+          ports:
+          - containerPort: 8443 &lt;i class=&quot;conum&quot; data-value=&quot;5&quot;&gt;&lt;/i&gt;&lt;b&gt;(5)&lt;/b&gt;
+            protocol: TCP
+          volumeMounts:
+          - mountPath: /etc/nginx/conf.d/
+            name: nginx-config-volume
+          - mountPath: /etc/nginx/certs  &lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;(3)&lt;/b&gt;
+            name: nginx-cert-volume      &lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;(3)&lt;/b&gt;
+        initContainers:
+        - name: init-mydb
+          image: busybox
+          command: ['sh', '-c', 'until nslookup mydb; do echo waiting for mydb; sleep 2; done;']
+        volumes:
+        - configMap:
+            defaultMode: 420
+            name: ${NAME}-nginx-config
+          name: nginx-config-volume
+        - secret:                    &lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;(2)&lt;/b&gt;
+            secretName: ${NAME}-cert &lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;(2)&lt;/b&gt;
+          name: nginx-cert-volume    &lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;(2)&lt;/b&gt;
+    triggers: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+    annotations:
+      service.alpha.openshift.io/serving-cert-secret-name: ${NAME}-cert  &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+  spec:
+    ports:
+    - port: 8443 &lt;i class=&quot;conum&quot; data-value=&quot;5&quot;&gt;&lt;/i&gt;&lt;b&gt;(5)&lt;/b&gt;
+      protocol: TCP
+      targetPort: 8443 &lt;i class=&quot;conum&quot; data-value=&quot;5&quot;&gt;&lt;/i&gt;&lt;b&gt;(5)&lt;/b&gt;
+      name: http
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+- apiVersion: v1
+  kind: Route
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    port:
+      targetPort: 8443 &lt;i class=&quot;conum&quot; data-value=&quot;5&quot;&gt;&lt;/i&gt;&lt;b&gt;(5)&lt;/b&gt;
+    to:
+      kind: Service
+      name: ${NAME}
+    tls:
+      termination: reencrypt  &lt;i class=&quot;conum&quot; data-value=&quot;6&quot;&gt;&lt;/i&gt;&lt;b&gt;(6)&lt;/b&gt;
+      insecureEdgeTerminationPolicy: Redirect &lt;i class=&quot;conum&quot; data-value=&quot;8&quot;&gt;&lt;/i&gt;&lt;b&gt;(8)&lt;/b&gt;
+      destinationCACertificate: |-            &lt;i class=&quot;conum&quot; data-value=&quot;7&quot;&gt;&lt;/i&gt;&lt;b&gt;(7)&lt;/b&gt;
+        -----BEGIN CERTIFICATE-----
+        MIIC6jCCAdKgAwIBAgIBATANBgkqhkiG9w0BAQsFADAmMSQwIgYDVQQDDBtvcGVu
+        c2hpZnQtc2lnbmVyQDE1MDE1OTkwMjIwHhcNMTcwODAxMTQ1MDIxWhcNMjIwNzMx
+        MTQ1MDIyWjAmMSQwIgYDVQQDDBtvcGVuc2hpZnQtc2lnbmVyQDE1MDE1OTkwMjIw
+        ggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC82yK5Tbda+qrQy3NTuJPK
+        UchalxsHafqNGz1b0iWFhD+kUovTPBZw67qfIbH7Rl+sVYECUXmWrkI3ctbr5ZXd
+        en2WDl5SsAjNodRiYHbxXGOEUUGhwykpWaD0+SxuA9ZNrMEGzxJlueSfhC1zWKE6
+        HR+q5lfxlFyY0/+BX2AgmvQDWS9fElwgnbLc+pQSfHAWFQ+ic7pPemxh468WjTIY
+        N2mT4lHLgjYRNf7GpC5TrNaA5FrUZ8hIevjtrlKDaSJian6rjJOinuACI2iQmHDm
+        e91LJLVvZmhiehwMGyAuDqaCvPBHF8TwNxFzj5TUzCY3c9Kr8HeClHxUhTYRsD+h
+        AgMBAAGjIzAhMA4GA1UdDwEB/wQEAwICpDAPBgNVHRMBAf8EBTADAQH/MA0GCSqG
+        SIb3DQEBCwUAA4IBAQAF6uaque2iQ7RD4sqoziIIKVaHgc4YFfOfRkt9ZQ4Fhd6R
+        VJKduVcqeBYPuzgXkPn/qZRDEVOTxwu7luqBg/+nbShKZ1fIT4/gKaSzQVFW/wPP
+        vWfTHrWTPbeYNBq2/00BkpGRT2M9T/KOKOVwmfN7x7uPdsmuThRlKpnb3we3riql
+        PogX0pjvyggLv0gREKWKiRSFg9ngZfLuQR0nxvbRxRoPVaefQwTr9GTIU69SWxWX
+        fyuoKFEGWbVN+DGCfPLRXMfvpxLjJiYoMK9VdL1rPX+C5evlDnA+U8MQhek+PgH5
+        BNGyLtH/x68Y+wQ4k4m8A/+/Lp43r8n5e1Kb5R/w
+        -----END CERTIFICATE-----
+
+        -----BEGIN CERTIFICATE-----
+        MIIDCjCCAfKgAwIBAgIBATANBgkqhkiG9w0BAQsFADA2MTQwMgYDVQQDDCtvcGVu
+        c2hpZnQtc2VydmljZS1zZXJ2aW5nLXNpZ25lckAxNTAxNTk5MDIyMB4XDTE3MDgw
+        MTE0NTAyMloXDTIyMDczMTE0NTAyM1owNjE0MDIGA1UEAwwrb3BlbnNoaWZ0LXNl
+        cnZpY2Utc2VydmluZy1zaWduZXJAMTUwMTU5OTAyMjCCASIwDQYJKoZIhvcNAQEB
+        BQADggEPADCCAQoCggEBAKxHhXqzbxfzHCT0gDQEVbnJvMVs+KVvYK9sP20sGhua
+        9rJR9S8CaRhFWsqC7R0FxMfJgWKeLU2IXC7cPKNjYVpC5Yp8jkSXsd9fRXOuky5F
+        WW+FYUBWSZwgSdASk33pqUYllcNUbpVJWCPYVJOX1Gh4Pra8GrycgbcNOYm40mYb
+        +nJFzjON9ISBIdinclS545aK9FVbJesy4Gia8zOItiKakZLFLP9shQjTDS5mliWe
+        pl0wBaB7h/Cg7aI3/SVlsABE1dJyxpd3fE0NhLdB70/+SNEIoDIc7o5gQsJHvF+e
+        yXxNeNoVXQAaXE+bBKq2lJkA4ivZi3Vmf1BDSba7as0CAwEAAaMjMCEwDgYDVR0P
+        AQH/BAQDAgKkMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAHGi
+        CfxsWysSLhHfIC2crIO5WoarBa3BrZapQhECe4pcI7mqISFPLVO5rpXx2iBw+QrK
+        vjWeAd/8G9HueA7GcGkgolmcHHAJwJ/Xj9Kkt8exKxnfDoRwYHKBDaUA9w8HyFHx
+        EMOlbNfaO2o2p1FcfZ1SCxoKcNhMt1mpOZVT9sGZV5o/x3o247GqZdIDrpLpz8xq
+        Lv7/3WlLwOhkGfLPY8Vi+gZ24oeZijtReVM7WZ/SpQ2O/Xo+cfkUYnDxyibJ6NEl
+        eIzIGQw80rLK72pYYwbcOFd1xOYQx2hsDAEY2wRP6QvLAtUHf+DrZj0xkHZmkolp
+        QGPHERXkiLqNBtyY/Rk=
+        -----END CERTIFICATE-----
+parameters:
+- name: NAME
+  description: The name for the deployment config, service and route
+  required: true
+- name: DOCKER_IMAGE
+  description:
+  required: true
+- name: CONTAINER_PORT
+  description: The port which will be exposed as service and route
+  value: &quot;8080&quot;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;colist arabic&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;1&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;add annotation to the route to let OpenShift generate the certificate secret for us&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;2&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;configure secret as volume&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;3&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;mount the secret to our nginx container&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;4&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;update nginx configuration to listen on port 8443 using ssl with the provided certificates&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;5&quot;&gt;&lt;/i&gt;&lt;b&gt;5&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;use port 8443 instead of 8081 just to make clear that we are using encryption&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;6&quot;&gt;&lt;/i&gt;&lt;b&gt;6&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;tell openshift to re-encrypt incoming traffic to the router before forwarding it to the service&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;7&quot;&gt;&lt;/i&gt;&lt;b&gt;7&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;configure the certificate which should be used to validate the certificate used in nginx. You need to replace this
+ certificate with the one from your installation. You can retrieve it from any pod by checking the file &lt;code&gt;/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt&lt;/code&gt;.
+In OpenShift 3.6 it should no longer be necessary to configure this when using service serving certificates.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;8&quot;&gt;&lt;/i&gt;&lt;b&gt;8&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;redirect insecure traffic to a secure schema (http &amp;#8594; https)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;That&amp;#8217;s the complete template.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;highlightjs highlight nowrap&quot;&gt;&lt;code class=&quot;language-bash hljs&quot; data-lang=&quot;bash&quot;&gt;oc process -f generic-template-with-internal-encryption.yml NAME=jenkins DOCKER_IMAGE=openshift/jenkins-2-centos7:latest|oc apply -f -
+oc rollout latest dc/jenkins&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;After applying it connection you can access your application and the traffic to and from the edge router is encrypted.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Possible improvements: The port of the application should be injected into the nginx configuration as well.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;</content><author><name>Torsten Walter</name></author><category term="openshift" /><summary type="html">Describes how nginx can be used as sidecar container to secure network traffic inside OpenShift by using TLS encryption and service serving certificate secrets.</summary></entry><entry><title type="html">How to run nginx on OpenShift?</title><link href="https://torstenwalter.de/openshift/nginx/2017/08/04/nginx-on-openshift.html" rel="alternate" type="text/html" title="How to run nginx on OpenShift?" /><published>2017-08-04T11:00:00+00:00</published><updated>2017-08-04T11:00:00+00:00</updated><id>https://torstenwalter.de/openshift/nginx/2017/08/04/nginx-on-openshift</id><content type="html" xml:base="https://torstenwalter.de/openshift/nginx/2017/08/04/nginx-on-openshift.html">&lt;div id=&quot;toc&quot; class=&quot;toc&quot;&gt;
+&lt;div id=&quot;toctitle&quot;&gt;Table of Contents&lt;/div&gt;
+&lt;ul class=&quot;sectlevel1&quot;&gt;
+&lt;li&gt;&lt;a href=&quot;#fix_file_and_directory_permissions&quot;&gt;Fix file and directory permissions&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;#fix_used_port&quot;&gt;Fix used port&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;#remove_user_directive&quot;&gt;Remove user directive&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;#dockerfile&quot;&gt;Dockerfile&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;#run_nginx_in_openshift&quot;&gt;Run nginx in OpenShift&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;The official &lt;a href=&quot;http://nginx.org/&quot;&gt;NGINX&lt;/a&gt; docker container published on &lt;a href=&quot;https://hub.docker.com/_/nginx/&quot;&gt;docker hub&lt;/a&gt; does not run on Openshift,
+because of OpenShift security constraints. If you want to learn more about it continue reading otherwise you could jump directly to &lt;a href=&quot;#run_nginx_in_openshift&quot;&gt;Run nginx in OpenShift&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;To quote from &lt;a href=&quot;https://docs.openshift.com/container-platform/3.5/creating_images/guidelines.html#openshift-container-platform-specific-guidelines&quot;&gt;OpenShift Container Platform-Specific Guidelines&lt;/a&gt;:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;quoteblock&quot;&gt;
+&lt;blockquote&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Support Arbitrary User IDs&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;By default, OpenShift Container Platform runs containers using an arbitrarily assigned user ID. This provides additional security against processes escaping the container due to a container engine vulnerability and thereby achieving escalated permissions on the host node.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;For an image to support running as an arbitrary user, directories and files that may be written to by processes in the image should be owned by the root group and be read/writable by that group. Files to be executed should also have group execute permissions.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/blockquote&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;fix_file_and_directory_permissions&quot;&gt;Fix file and directory permissions&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Let&amp;#8217;s chack the nginx configuration file for possible file or directory permission problems.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;/etc/nginx/nginx.conf&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;highlightjs highlight nowrap&quot;&gt;&lt;code class=&quot;language-nginx hljs&quot; data-lang=&quot;nginx&quot;&gt;user  nginx;
+worker_processes  1;
+
+error_log  /var/log/nginx/error.log warn; &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+pid        /var/run/nginx.pid; &lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;(2)&lt;/b&gt;
+
+
+events {
+    worker_connections  1024;
+}
+
+
+http {
+    include       /etc/nginx/mime.types; &lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;(3)&lt;/b&gt;
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] &quot;$request&quot; '
+                      '$status $body_bytes_sent &quot;$http_referer&quot; '
+                      '&quot;$http_user_agent&quot; &quot;$http_x_forwarded_for&quot;';
+
+    access_log  /var/log/nginx/access.log  main; &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    keepalive_timeout  65;
+
+    #gzip  on;
+
+    include /etc/nginx/conf.d/*.conf; &lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;(4)&lt;/b&gt;
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;colist arabic&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;1&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;/var/log/nginx&lt;/code&gt; - the directory for nginx logs needs to be writeable by group &lt;code&gt;root&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;2&quot;&gt;&lt;/i&gt;&lt;b&gt;2&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;/var/run&lt;/code&gt; - the nginx.pid file is written there so we need write permissions here is well&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;3&quot;&gt;&lt;/i&gt;&lt;b&gt;3&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;/etc/nginx/mime.types&lt;/code&gt; - read permissions will do in this case&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;4&quot;&gt;&lt;/i&gt;&lt;b&gt;4&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;/etc/nginx/conf.d/&lt;/code&gt; - as nginx should not write to configuration files read permissions are sufficient&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;In addition nginx writes files to &lt;code&gt;/var/cache/nginx&lt;/code&gt;&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Let&amp;#8217;s check the permissions for these files and directories:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;ulist&quot;&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;run the official nginx docker image:&lt;/p&gt;
+&lt;div class=&quot;literalblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;docker run -it nginx:latest /bin/bash&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;check the owner, group and permissions&lt;/p&gt;
+&lt;div class=&quot;literalblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;ls -aldH /var/log/nginx /var/run /etc/nginx /etc/nginx/mime.types /etc/nginx/conf.d /var/cache/nginx&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;literalblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;drwxr-xr-x 3 root root 4096 Jul 26 07:33 /etc/nginx
+drwxr-xr-x 2 root root 4096 Jul 26 07:33 /etc/nginx/conf.d
+-rw-r--r-- 1 root root 3957 Jul 11 13:06 /etc/nginx/mime.types
+drwxr-xr-x 2 root root 4096 Jul 11 13:06 /var/cache/nginx
+drwxr-xr-x 1 root root 4096 Jul 26 07:34 /var/log/nginx
+drwxr-xr-x 4 root root 4096 Jul 23 00:00 /var/run&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;As you can see we need to correct the permissions for &lt;code&gt;/var/cache/nginx&lt;/code&gt;, &lt;code&gt;/var/log/nginx&lt;/code&gt; and &lt;code&gt;/var/run&lt;/code&gt;. The neccessary command to do so is:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;chmod g+rwx /var/cache/nginx /var/run /var/log/nginx&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;fix_used_port&quot;&gt;Fix used port&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;A side effect of running as an arbitrary user we can&amp;#8217;t listen to port 80 as the official nginx docker image does, as privileged ports can only be used by root.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;/etc/nginx/conf.d/default.conf&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;highlightjs highlight nowrap&quot;&gt;&lt;code class=&quot;language-nginx hljs&quot; data-lang=&quot;nginx&quot;&gt;server {
+    listen       80; &lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;(1)&lt;/b&gt;
+    server_name  localhost;
+
+    #charset koi8-r;
+    #access_log  /var/log/nginx/host.access.log  main;
+
+    location / {
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+    }
+
+    #error_page  404              /404.html;
+
+    # redirect server error pages to the static page /50x.html
+    #
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+
+    # proxy the PHP scripts to Apache listening on 127.0.0.1:80
+    #
+    #location ~ \.php$ {
+    #    proxy_pass   http://127.0.0.1;
+    #}
+
+    # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+    #
+    #location ~ \.php$ {
+    #    root           html;
+    #    fastcgi_pass   127.0.0.1:9000;
+    #    fastcgi_index  index.php;
+    #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+    #    include        fastcgi_params;
+    #}
+
+    # deny access to .htaccess files, if Apache's document root
+    # concurs with nginx's one
+    #
+    #location ~ /\.ht {
+    #    deny  all;
+    #}
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;colist arabic&quot;&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;i class=&quot;conum&quot; data-value=&quot;1&quot;&gt;&lt;/i&gt;&lt;b&gt;1&lt;/b&gt;&lt;/td&gt;
+&lt;td&gt;listen port is 80&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;We can change the port unsing an in-place sed expression:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;sed -i.bak 's/listen\(.*\)80;/listen 8081;/' /etc/nginx/conf.d/default.conf&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;remove_user_directive&quot;&gt;Remove user directive&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;If you start nginx with the modifications from above the following error message is shown:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;2017/08/04 06:51:55 [warn] 1#1: the &quot;user&quot; directive makes sense only if the master process runs with super-user privileges, ignored in /etc/nginx/nginx.conf:2
+nginx: [warn] the &quot;user&quot; directive makes sense only if the master process runs with super-user privileges, ignored in /etc/nginx/nginx.conf:2&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;This directive is listed on the first line of nginx.conf&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;/etc/nginx/nginx.conf&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;highlightjs highlight nowrap&quot;&gt;&lt;code class=&quot;language-nginx hljs&quot; data-lang=&quot;nginx&quot;&gt;user  nginx;
+worker_processes  1;
+
+error_log  /var/log/nginx/error.log warn;
+...&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;We can comment the user directive with a simple sed expression like:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;RUN sed -i.bak 's/^user/#user/' /etc/nginx/nginx.conf&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;dockerfile&quot;&gt;Dockerfile&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;The following Dockerfile can be used to fix the problems with the official nginx docker image so that it can be run on OpenShift:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;title&quot;&gt;Dockerfile&lt;/div&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre class=&quot;highlightjs highlight nowrap&quot;&gt;&lt;code class=&quot;language-docker hljs&quot; data-lang=&quot;docker&quot;&gt;FROM nginx:stable
+
+# support running as arbitrary user which belogs to the root group
+RUN chmod g+rwx /var/cache/nginx /var/run /var/log/nginx
+# users are not allowed to listen on priviliged ports
+RUN sed -i.bak 's/listen\(.*\)80;/listen 8081;/' /etc/nginx/conf.d/default.conf
+EXPOSE 8081
+# comment user directive as master process is run as user in OpenShift anyhow
+RUN sed -i.bak 's/^user/#user/' /etc/nginx/nginx.conf&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;So that you don&amp;#8217;t have to do this I created docker images with these modifications in &lt;a href=&quot;https://hub.docker.com/r/twalter/openshift-nginx/&quot; class=&quot;bare&quot;&gt;https://hub.docker.com/r/twalter/openshift-nginx/&lt;/a&gt;.
+The tags follow the official nginx tags. All images should automatically be rebuilt whenever the official nginx images are rebuilt.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;sect1&quot;&gt;
+&lt;h2 id=&quot;run_nginx_in_openshift&quot;&gt;Run nginx in OpenShift&lt;/h2&gt;
+&lt;div class=&quot;sectionbody&quot;&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;So finally we can use nginx in OpenShift:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;oc new-app twalter/openshift-nginx:stable --name nginx-stable
+oc expose svc nginx-stable --port=8081&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;When you open the public route you should see the message &quot;Welcome to nginx!&quot;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;Of course you can do the same with the other images:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;oc new-app twalter/openshift-nginx:latest --name nginx-latest
+oc expose svc nginx-latest --port=8081&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;The alpine versions are available as well:&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;oc new-app twalter/openshift-nginx:mainline-alpine --name nginx-mainline-alpine
+oc expose svc nginx-mainline-alpine --port=8081&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;paragraph&quot;&gt;
+&lt;p&gt;If you want to use a template to create a deployment config, service and route for nginx
+you could use &lt;a href=&quot;https://raw.githubusercontent.com/torstenwalter/openshift-nginx/master/tests/nginx-template.yml&quot;&gt;this one&lt;/a&gt; as basis. I am actually using it to test the built nginx images with
+the modifications described above.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class=&quot;listingblock&quot;&gt;
+&lt;div class=&quot;content&quot;&gt;
+&lt;pre&gt;oc process -f https://raw.githubusercontent.com/torstenwalter/openshift-nginx/master/tests/nginx-template.yml NAME=nginx-stable-alpine NGINX_VERSION=stable-alpine |oc apply -f -&lt;/pre&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;</content><author><name>Torsten Walter</name></author><category term="openshift" /><summary type="html">Changes needed in official nginx docker image to be able to run it on OpenShift (or Minishift).</summary></entry><entry><title type="html">How to install and configure fish shell on OSX</title><link href="https://torstenwalter.de/osx/shell/fish/2017/07/26/fish-shell.html" rel="alternate" type="text/html" title="How to install and configure fish shell on OSX" /><published>2017-07-26T10:00:00+00:00</published><updated>2017-07-26T10:00:00+00:00</updated><id>https://torstenwalter.de/osx/shell/fish/2017/07/26/fish-shell</id><content type="html" xml:base="https://torstenwalter.de/osx/shell/fish/2017/07/26/fish-shell.html">&lt;p&gt;&lt;a href=&quot;https://fishshell.com/&quot;&gt;fish&lt;/a&gt; is a very nice shell with autocompletion out of the box. I find it extremely useful.
+This explains how you can install it on OS X using homebrew and make it even better by using a popwerline style prompt.&lt;/p&gt;
+
+&lt;h2 id=&quot;install-fish-shell&quot;&gt;Install fish shell&lt;/h2&gt;
+&lt;p&gt;Let’s install it using brew&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;brew install fish
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Add &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/usr/local/bin/fish&lt;/code&gt; to &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/etc/shells&lt;/code&gt; if it is not alredy there:&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;cat /etc/shells|grep /usr/local/bin/fish ||sudo sh -c 'echo &quot;/usr/local/bin/fish&quot; &amp;gt;&amp;gt; /etc/shells'
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;make fish your default shell&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;chsh -s /usr/local/bin/fish
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;make-the-terminal-even-nicer-by-customizing-the-prompt&quot;&gt;Make the terminal even nicer by customizing the prompt&lt;/h2&gt;
+
+&lt;p&gt;fish shell is already awesome, but we can make it even better by using a powerline style prompt which displays git branches,
+the exit status of the last command, the current time  and much more.&lt;/p&gt;
+
+&lt;p&gt;To install it we are going to use Oh My Fish:&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Oh My Fish provides core infrastructure to allow you to install packages which extend or modify the look of your shell. It’s fast, extensible and easy to use.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Install &lt;a href=&quot;https://github.com/oh-my-fish/oh-my-fish&quot;&gt;oh-my-fish&lt;/a&gt;&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;curl -L https://get.oh-my.fish | fish
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Now we can use oh my fish to install bobthefish, which is a Powerline-style, Git aware fish theme.&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;omf install bobthefish
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Let’s make it even more awesome by installing nerd-fonts&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;brew tap caskroom/fonts
+brew cask install font-hack-nerd-font
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;After that you should change the font of your terminal to &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;Knack Nerd Font&lt;/code&gt; and enable them in bobthefish&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;set -g theme_nerd_fonts yes
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;</content><author><name>Torsten Walter</name></author><category term="osx" /><category term="shell" /><category term="fish" /><summary type="html">Explains how to install fishshell on OSX and configure a powerline style prompt.</summary></entry><entry><title type="html">How to build a docker image and upload it to Minishift’s docker registry?</title><link href="https://torstenwalter.de/minishift/openshift/docker/registry/2017/07/25/build-docker-image-and-upload-to-openshift-registry.html" rel="alternate" type="text/html" title="How to build a docker image and upload it to Minishift’s docker registry?" /><published>2017-07-25T13:30:00+00:00</published><updated>2017-07-25T13:30:00+00:00</updated><id>https://torstenwalter.de/minishift/openshift/docker/registry/2017/07/25/build-docker-image-and-upload-to-openshift-registry</id><content type="html" xml:base="https://torstenwalter.de/minishift/openshift/docker/registry/2017/07/25/build-docker-image-and-upload-to-openshift-registry.html">&lt;ul&gt;
+  &lt;li&gt;set docker environment variables to connect do Minishift docker daemon
+    &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;eval $(minishift docker-env)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+    &lt;p&gt;or when using fishshell&lt;/p&gt;
+    &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;eval (minishift docker-env)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;login to openshift
+    &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;oc login -u developer
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;login to the docker registry using the token from the currently logged-in openshift user
+    &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;docker login -u `oc whoami` -p `oc whoami -t` 172.30.1.1:5000
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+    &lt;p&gt;or when using fishshell&lt;/p&gt;
+    &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;docker login -u (oc whoami) -p (oc whoami -t) 172.30.1.1:5000
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;build the docker image
+    &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;docker-compose build
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+    &lt;p&gt;The output looks like:&lt;/p&gt;
+    &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Building jenkins
+Step 1 : FROM registry.hub.docker.com/library/centos:centos7
+ ---&amp;gt; 36540f359ca3
+Step 2 : ...
+       ...
+ ---&amp;gt; a4628dc93c97
+Successfully built a4628dc93c97
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;tag the newly created docker image
+    &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;docker tag a4628dc93c97 172.30.1.1:5000/myproject/jenkins
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;push the image to the docker registry
+    &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;docker push 172.30.1.1:5000/myproject/jenkins
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;verify that the image was uploaded
+    &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;oc get istag
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+    &lt;p&gt;output:&lt;/p&gt;
+    &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;NAME             DOCKER REF                                                                                                  UPDATED             IMAGENAME
+jenkins:latest   172.30.1.1:5000/myproject/jenkins@sha256:6cab7386a27b2a8aa97d181f1d413d54a9fcb6dbfcf9b98d53bcff64ad05726b   About an hour ago   sha256:6cab7386a27b2a8aa97d181f1d413d54a9fcb6dbfcf9b98d53bcff64ad05726b
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;If you want to give your image a different label then ‘latest’ you can specify it as well:
+    &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;docker tag a4628dc93c97 172.30.1.1:5000/myproject/jenkins:1.0.0
+docker push 172.30.1.1:5000/myproject/jenkins:1.0.0
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+    &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;oc get istag
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+    &lt;p&gt;output:&lt;/p&gt;
+    &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;NAME             DOCKER REF                                                                                                  UPDATED             IMAGENAME
+jenkins:latest   172.30.1.1:5000/myproject/jenkins@sha256:6cab7386a27b2a8aa97d181f1d413d54a9fcb6dbfcf9b98d53bcff64ad05726b   About an hour ago   sha256:6cab7386a27b2a8aa97d181f1d413d54a9fcb6dbfcf9b98d53bcff64ad05726b
+jenkins:1.0.0    172.30.1.1:5000/myproject/jenkins@sha256:0e1b8efd34dc13e721b231cab8c7e07fda5b03a14ef451874580c01fc1c2740d   27 seconds ago      sha256:0e1b8efd34dc13e721b231cab8c7e07fda5b03a14ef451874580c01fc1c2740d
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;create a new application from the uploaded image
+    &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;oc new-app --image-stream=jenkins --name=jenkins
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;expose a route for the new application
+    &lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;oc expose service jenkins
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;</content><author><name>Torsten Walter</name></author><category term="minishift" /><category term="openshift" /><category term="docker" /><category term="registry" /><summary type="html">Steps needed to push docker images to the Minishift docker registry.</summary></entry><entry><title type="html">Installing Minishift on OS X</title><link href="https://torstenwalter.de/minishift/openshift/homebrew/2017/07/18/install-minishift-on-osx.html" rel="alternate" type="text/html" title="Installing Minishift on OS X" /><published>2017-07-18T12:30:00+00:00</published><updated>2017-07-18T12:30:00+00:00</updated><id>https://torstenwalter.de/minishift/openshift/homebrew/2017/07/18/install-minishift-on-osx</id><content type="html" xml:base="https://torstenwalter.de/minishift/openshift/homebrew/2017/07/18/install-minishift-on-osx.html">&lt;p&gt;If you want to play around with OpenShift locally then Minishift is a nice option.&lt;/p&gt;
+
+&lt;p&gt;When I tried to install it then I got an error message that the openshift docker image could not be loaded.
+Luckily this &lt;a href=&quot;https://github.com/minishift/minishift/issues/109#issuecomment-254895497&quot;&gt;comment&lt;/a&gt; pointed me
+in the right direction, that DNS was not working properly.&lt;/p&gt;
+
+&lt;h2 id=&quot;install-dnsmasq&quot;&gt;Install dnsmasq&lt;/h2&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;brew update
+brew install dnsmasq
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Edit /usr/local/etc/dnsmasq.conf to configure dnsmasq to listen on all network interfaces:&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;listen-address=0.0.0.0
+listen-address=::1
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Restart dnsmasq&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sudo brew services restart dnsmasq
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;test if nameserver listens on all ip adresses&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;# use 127.0.0.1 to lookup index.docker.io
+nslookup index.docker.io 127.0.0.1
+# use 192.168.64.1 to lookup index.docker.io
+nslookup index.docker.io 192.168.64.1
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;install-minishift&quot;&gt;Install Minishift&lt;/h2&gt;
+
+&lt;h3 id=&quot;install-yhyve&quot;&gt;Install yhyve&lt;/h3&gt;
+&lt;p&gt;https://docs.openshift.org/latest/minishift/getting-started/setting-up-driver-plugin.html&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;brew install xhyve
+brew install docker-machine-driver-xhyve
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;install-virtualbox&quot;&gt;Install VirtualBox&lt;/h3&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;brew cask install virtualbox
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;install-minishift-1&quot;&gt;Install Minishift&lt;/h3&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;brew cask install minishift
+minishift start
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;alternatively you could start minishift using different disk size or memory parameters&lt;/p&gt;
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;minishift start --disk-size 100g --memory 4096
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;</content><author><name>Torsten Walter</name></author><category term="minishift" /><category term="openshift" /><category term="homebrew" /><summary type="html">Explains how to install Minishift as a local development alternative for OpenShift.</summary></entry><entry><title type="html">Continuous Delivery with Maven and Jenkins</title><link href="https://torstenwalter.de/maven/jenkins/2016/12/14/continuous-delivery-with-maven-and-jenkins.html" rel="alternate" type="text/html" title="Continuous Delivery with Maven and Jenkins" /><published>2016-12-14T12:30:00+00:00</published><updated>2016-12-14T12:30:00+00:00</updated><id>https://torstenwalter.de/maven/jenkins/2016/12/14/continuous-delivery-with-maven-and-jenkins</id><content type="html" xml:base="https://torstenwalter.de/maven/jenkins/2016/12/14/continuous-delivery-with-maven-and-jenkins.html">&lt;p&gt;Motivation: Every jenkins build produces a potential release and as such each build should have a unique version number.
+This post shows how to use the Jenkins build number to archive this.&lt;/p&gt;
+
+&lt;p&gt;The basic idea is to use a variable as part of the &amp;lt;version&amp;gt;…&amp;lt;/version&amp;gt; declaration in your pom.xml. This variable
+is set to 1.0-SNAPSHOT by default for local builds and when executed on jenkins to ‘1.0-&amp;lt;BUILD_NUMBER&amp;gt;’.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-xml&quot; data-lang=&quot;xml&quot;&gt;&lt;span class=&quot;nt&quot;&gt;&amp;lt;project&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;xmlns=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;http://maven.apache.org/POM/4.0.0&quot;&lt;/span&gt; &lt;span class=&quot;na&quot;&gt;xmlns:xsi=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;http://www.w3.org/2001/XMLSchema-instance&quot;&lt;/span&gt;
+         &lt;span class=&quot;na&quot;&gt;xsi:schemaLocation=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd&quot;&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;modelVersion&amp;gt;&lt;/span&gt;4.0.0&lt;span class=&quot;nt&quot;&gt;&amp;lt;/modelVersion&amp;gt;&lt;/span&gt;
+
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;groupId&amp;gt;&lt;/span&gt;de.torstenwalter.examples&lt;span class=&quot;nt&quot;&gt;&amp;lt;/groupId&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;artifactId&amp;gt;&lt;/span&gt;jenkins-versioning&lt;span class=&quot;nt&quot;&gt;&amp;lt;/artifactId&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;version&amp;gt;&lt;/span&gt;${revision}&lt;span class=&quot;nt&quot;&gt;&amp;lt;/version&amp;gt;&lt;/span&gt;
+
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;properties&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;baseRevision&amp;gt;&lt;/span&gt;1.0&lt;span class=&quot;nt&quot;&gt;&amp;lt;/baseRevision&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;revision&amp;gt;&lt;/span&gt;${baseRevision}-SNAPSHOT&lt;span class=&quot;nt&quot;&gt;&amp;lt;/revision&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;/properties&amp;gt;&lt;/span&gt;
+
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;profiles&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;profile&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;id&amp;gt;&lt;/span&gt;jenkins&lt;span class=&quot;nt&quot;&gt;&amp;lt;/id&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;activation&amp;gt;&lt;/span&gt;
+                &lt;span class=&quot;nt&quot;&gt;&amp;lt;property&amp;gt;&lt;/span&gt;
+                    &lt;span class=&quot;nt&quot;&gt;&amp;lt;name&amp;gt;&lt;/span&gt;env.BUILD_NUMBER&lt;span class=&quot;nt&quot;&gt;&amp;lt;/name&amp;gt;&lt;/span&gt;
+                &lt;span class=&quot;nt&quot;&gt;&amp;lt;/property&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;/activation&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;properties&amp;gt;&lt;/span&gt;
+                &lt;span class=&quot;nt&quot;&gt;&amp;lt;revision&amp;gt;&lt;/span&gt;${baseRevision}-${env.BUILD_NUMBER}&lt;span class=&quot;nt&quot;&gt;&amp;lt;/revision&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;/properties&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;/profile&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;/profiles&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;nt&quot;&gt;&amp;lt;/project&amp;gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;As variable name for the version &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;${revision}&lt;/code&gt; is used as it is explicitly allowed since maven 3.2.1  at that location
+(see &lt;a href=&quot;https://issues.apache.org/jira/browse/MNG-5576&quot;&gt;improvement MNG-5576&lt;/a&gt;).&lt;/p&gt;
+
+&lt;p&gt;This is the warning if you try to use a different variable name e.g. ${myVar} instead of ${revision}:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;[WARNING] Some problems were encountered while building the effective model for de.torstenwalter.examples:jenkins-versioning:jar:${myVar}
+[WARNING] 'version' contains an expression but should be a constant. @ line 7, column 14
+[WARNING]
+[WARNING] It is highly recommended to fix these problems because they threaten the stability of your build.
+[WARNING]
+[WARNING] For this reason, future Maven versions might no longer support building such malformed projects.
+[WARNING]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;This snippet sets the default value for revision to 1.0-SNAPSHOT:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-xml&quot; data-lang=&quot;xml&quot;&gt;    &lt;span class=&quot;nt&quot;&gt;&amp;lt;properties&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;baseRevision&amp;gt;&lt;/span&gt;1.0&lt;span class=&quot;nt&quot;&gt;&amp;lt;/baseRevision&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;revision&amp;gt;&lt;/span&gt;${baseRevision}-SNAPSHOT&lt;span class=&quot;nt&quot;&gt;&amp;lt;/revision&amp;gt;&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;&amp;lt;/properties&amp;gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;baseRevision&lt;/code&gt; is meant to provide the base version e.g. 1.0 or 2.3 where the build number is later appended or -LATEST for
+local builds.&lt;/p&gt;
+
+&lt;p&gt;The build number is included as part of the version by using a maven profile which is automatically enabled when the 
+environment variable &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;BUILD_NUMBER&lt;/code&gt; is present.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-xml&quot; data-lang=&quot;xml&quot;&gt;        &lt;span class=&quot;nt&quot;&gt;&amp;lt;profile&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;id&amp;gt;&lt;/span&gt;jenkins&lt;span class=&quot;nt&quot;&gt;&amp;lt;/id&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;activation&amp;gt;&lt;/span&gt;
+                &lt;span class=&quot;nt&quot;&gt;&amp;lt;property&amp;gt;&lt;/span&gt;
+                    &lt;span class=&quot;nt&quot;&gt;&amp;lt;name&amp;gt;&lt;/span&gt;env.BUILD_NUMBER&lt;span class=&quot;nt&quot;&gt;&amp;lt;/name&amp;gt;&lt;/span&gt;
+                &lt;span class=&quot;nt&quot;&gt;&amp;lt;/property&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;/activation&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;properties&amp;gt;&lt;/span&gt;
+                &lt;span class=&quot;nt&quot;&gt;&amp;lt;revision&amp;gt;&lt;/span&gt;${baseRevision}-${env.BUILD_NUMBER}&lt;span class=&quot;nt&quot;&gt;&amp;lt;/revision&amp;gt;&lt;/span&gt;
+            &lt;span class=&quot;nt&quot;&gt;&amp;lt;/properties&amp;gt;&lt;/span&gt;
+        &lt;span class=&quot;nt&quot;&gt;&amp;lt;/profile&amp;gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;</content><author><name>Torsten Walter</name></author><category term="maven" /><category term="jenkins" /><summary type="html">How to automatically create unique version numbers with Maven in Jenkins.</summary></entry></feed>
