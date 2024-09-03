@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url>
+<loc>https://torstenwalter.de/maven/jenkins/2016/12/14/continuous-delivery-with-maven-and-jenkins.html</loc>
+<lastmod>2016-12-14T12:30:00+00:00</lastmod>
+</url>
+<url>
+<loc>https://torstenwalter.de/minishift/openshift/homebrew/2017/07/18/install-minishift-on-osx.html</loc>
+<lastmod>2017-07-18T12:30:00+00:00</lastmod>
+</url>
+<url>
+<loc>https://torstenwalter.de/minishift/openshift/docker/registry/2017/07/25/build-docker-image-and-upload-to-openshift-registry.html</loc>
+<lastmod>2017-07-25T13:30:00+00:00</lastmod>
+</url>
+<url>
+<loc>https://torstenwalter.de/osx/shell/fish/2017/07/26/fish-shell.html</loc>
+<lastmod>2017-07-26T10:00:00+00:00</lastmod>
+</url>
+<url>
+<loc>https://torstenwalter.de/openshift/nginx/2017/08/04/nginx-on-openshift.html</loc>
+<lastmod>2017-08-04T11:00:00+00:00</lastmod>
+</url>
+<url>
+<loc>https://torstenwalter.de/openshift/nginx/sidecar/tls/encryption/certificates/2017/08/07/nginx-as-sidecar-container-to-secure-openshift-traffic.html</loc>
+<lastmod>2017-08-07T10:00:00+00:00</lastmod>
+</url>
+<url>
+<loc>https://torstenwalter.de/virtualbox/ubuntu/2019/06/13/install-virtualbox-ubuntu-secure-boot.html</loc>
+<lastmod>2019-06-13T18:00:00+00:00</lastmod>
+</url>
+<url>
+<loc>https://torstenwalter.de/</loc>
+</url>
+</urlset>
